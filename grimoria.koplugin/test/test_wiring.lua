@@ -74,7 +74,7 @@ local EXPECTED = {
     ["lib/fetch"] = {
         "fetchFromAI", "getMaxCharsSetting", "askSpoilerPreference", "holdDeviceAwake",
         "releaseDeviceAwake", "continueWithFetch", "makeCancelConfirmWidget",
-        "runFetch", "getReadingProgress",
+        "runFetch", "getReadingProgress", "fetchChapterRange", "pickChapter",
     },
     ["lib/ui/menu"] = {
         "addToMainMenu", "getMenuCounts", "showQuickGrimoriaMenu", "showFullGrimoriaMenu",
@@ -97,7 +97,14 @@ local EXPECTED = {
         "showCharacters", "showCharacterDetails", "showCharacterInfo",
         "showCharacterSearch", "findCharacterByName", "showLocations", "showAuthorInfo",
         "showSummary", "showThemes", "showTimeline", "showHistoricalFigures",
-        "showHistoricalFigureDetails", "showChapterCharacters",
+        "showHistoricalFigureDetails", "showChapterCharacters", "showLongText",
+    },
+    ["lib/ui/lookup"] = {
+        "registerHighlightLookup", "matchCharactersInSelection", "lookupInGrimoria",
+    },
+    ["lib/ui/appearances"] = {
+        "appearanceScope", "reportAppearanceProblem", "showChapterAppearances",
+        "renderAppearances", "jumpToChapter", "showAppearancesPicker",
     },
     ["lib/updater"] = {
         "checkForUpdates", "checkForUpdatesInner", "updaterRun", "updaterHealthCheck",
@@ -110,7 +117,7 @@ local EXPECTED = {
 local order = {
     "main.lua (shell)", "lib/spoilers", "lib/fetch", "lib/ui/menu",
     "lib/ui/settings", "lib/ui/versions", "lib/ui/notes", "lib/ui/views",
-    "lib/updater",
+    "lib/ui/lookup", "lib/ui/appearances", "lib/updater",
 }
 
 local total = 0
@@ -127,7 +134,9 @@ for _, group in ipairs(order) do
 end
 
 --[[
-66 from the split, plus 15 for lib/updater and 2 for the current-chapter rule.
+66 from the split, plus 15 for lib/updater, 2 for the current-chapter rule,
+1 for showLongText, 3 for lib/ui/lookup, 6 for lib/ui/appearances and 2 for
+the chapter-range fetch.
 
 66, not 67, at the split: main.lua had 67 top-level blocks before it, and
 exactly one of them -- fuseCharacters -- is a plain local rather than a method.
@@ -136,7 +145,7 @@ mixin list; if it climbs without this line being updated deliberately, someone
 added a method without deciding which module owns it.
 ]]
 print("\n=== the split did not drop anything ===")
-check(total == 83, "83 methods accounted for across 9 files (counted " .. total .. ")")
+check(total == 95, "95 methods accounted for across 11 files (counted " .. total .. ")")
 
 -- fuseCharacters is a file-local in lib/spoilers.lua, deliberately not a method.
 check(Plugin.fuseCharacters == nil,

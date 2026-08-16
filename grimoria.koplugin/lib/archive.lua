@@ -32,6 +32,13 @@ Archive.PAYLOAD_VERSION = "7.0"
 Archive.INDEX_FILE = "grimoria_versions.lua"
 Archive.LEGACY_FILE = "grimoria_cache.lua"
 
+-- Chapter-appearance counts, which are derived from the book text rather than
+-- bought from a model. Its own file and its own version number precisely
+-- because it is cheap to rebuild: bumping this throws away a scan, never an
+-- analysis, so it can change whenever the shape needs to.
+Archive.MENTIONS_FILE = "grimoria_mentions.lua"
+Archive.MENTIONS_VERSION = "1"
+
 function Archive:new(o)
     o = o or {}
     setmetatable(o, self)
@@ -115,6 +122,10 @@ function Archive:summarise(data)
         provider   = meta.provider,
         model      = meta.model,
         effort     = meta.effort,
+        -- { first = , last = } when this analysis covered only part of the
+        -- book. Nil for the ordinary whole-book run, which is what every
+        -- analysis written before section analyses existed is.
+        scope      = meta.scope,
     }
 end
 
@@ -254,6 +265,74 @@ function Archive:loadIndex(book_path)
     return index
 end
 
+-- ------------------------------------------------- chapter appearances ----
+
+function Archive:getMentionsPath(book_path)
+    local dir = self:getSidecarDir(book_path)
+    return dir and (dir .. "/" .. self.MENTIONS_FILE) or nil
+end
+
+--[[
+Store one scan.
+
+`names` is stored beside the rows and is the whole reason this is safe to
+reuse: the counts are indexed by the character's position in the FILTERED list,
+and that list grows as the reader meets more people. Reusing a scan against a
+different list would attribute one person's mentions to another -- silently,
+and in a way that looks like a plausible bar chart. So the names are compared
+element by element on load, and anything that does not match is rescanned.
+
+`up_to` is compared the same way, and exactly rather than "at least": a scan
+made at chapter 20 has no counts for chapters 21..40, but it also has no counts
+for characters the reader had not met at chapter 20, so it cannot be extended
+by scanning only the new chapters. Rescanning the whole thing is the honest
+answer and the only correct one.
+]]
+function Archive:saveMentions(book_path, payload)
+    local path = self:getMentionsPath(book_path)
+    if not path or not self:ensureDirectory(path) then return false end
+
+    payload.mentions_version = self.MENTIONS_VERSION
+    payload.scanned_at = os.time()
+
+    local ok, err = pcall(function()
+        local f = assert(io.open(path, "w"))
+        f:write("-- Grimoria chapter appearances (derived from the book text;\n")
+        f:write("-- safe to delete, it is rebuilt by scanning again)\n\n")
+        f:write("return " .. self:serialize(payload))
+        f:close()
+    end)
+    if not ok then
+        logger.warn("Archive: could not write mentions:", tostring(err))
+        return false
+    end
+    return true
+end
+
+-- The stored scan, if it is still the right one for this analysis, this
+-- reading position and this cast. nil means "scan again".
+function Archive:loadMentions(book_path, version_id, up_to, names)
+    local path = self:getMentionsPath(book_path)
+    if not path or not lfs.attributes(path) then return nil end
+
+    local ok, data = pcall(function() return dofile(path) end)
+    if not ok or type(data) ~= "table" then
+        logger.warn("Archive: could not read mentions:", tostring(data))
+        return nil
+    end
+    if data.mentions_version ~= self.MENTIONS_VERSION then return nil end
+    if data.version_id ~= version_id then return nil end
+    if data.up_to ~= up_to then return nil end
+
+    local stored = data.names or {}
+    if #stored ~= #names then return nil end
+    for i = 1, #names do
+        if stored[i] ~= names[i] then return nil end
+    end
+
+    return data.rows
+end
+
 function Archive:getActiveVersion(index)
     if not index or #index.versions == 0 then return nil end
     for _, v in ipairs(index.versions) do
@@ -301,7 +380,13 @@ end
 --[[
 Store a new analysis as its own version and make it active.
 
-meta = { provider = , model = , effort = , label = }  (all optional)
+meta = { provider = , model = , effort = , label = , scope = }  (all optional)
+
+`scope` is { first = , last = } for a section analysis -- a run over part of a
+long book rather than all of it. It changes nothing about how the analysis is
+read or filtered; it exists so the version picker can say which part, because
+two runs of the same model over different halves of a book are otherwise
+indistinguishable in that list.
 
 The model is written into the payload rather than only into the index, so a
 version is self-describing even if the index is lost and rebuilt.
@@ -325,6 +410,7 @@ function Archive:saveCache(book_path, data, meta)
         model = meta.model,
         effort = meta.effort,
         label = meta.label,
+        scope = meta.scope,
         created_at = data.cached_at,
     }
 

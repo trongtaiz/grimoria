@@ -129,6 +129,15 @@ function GrimoriaPlugin:describeVersion(v, is_active)
     ]]
     local stats = string.format("%d ch, %d chars", v.chapters or 0, v.characters or 0)
 
+    -- A section analysis covered part of the book, and saying which part is
+    -- the only thing that tells two runs of the same model over different
+    -- halves apart. Not a spoiler: the range is what the reader themselves
+    -- chose to send.
+    if type(v.scope) == "table" and v.scope.first and v.scope.last then
+        stats = string.format("ch %d-%d, %d chars",
+                              v.scope.first, v.scope.last, v.characters or 0)
+    end
+
     -- Literal UTF-8, not a "\u{2713}" escape: that is Lua 5.3 syntax and
     -- KOReader runs LuaJIT, where it fails to parse and takes the whole
     -- plugin down at load time.

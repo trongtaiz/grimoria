@@ -25,6 +25,10 @@ why at length. Adding a field is fine; changing what one means is not.
 --updater-version is the escape hatch. Raise it only when a release cannot be
 installed by the updater already on people's devices; those installs will then
 replace their own lib/updater.lua first and update on a second pass.
+
+RUN `git add -A` FIRST. The manifest is checked against the git index before it
+is written -- a file the repository does not have, or one whose bytes differ
+from what git stored, is refused rather than shipped. See check_against_git.
 """
 
 import argparse
@@ -32,6 +36,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 
 CONTRACT = 1
@@ -67,6 +72,78 @@ def sha256(path):
         for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def git(*args):
+    """Run a git command in the repo, or return None if git is unavailable."""
+    try:
+        out = subprocess.run(("git",) + args, cwd=REPO_ROOT,
+                             capture_output=True, check=True)
+        return out.stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def check_against_git(files):
+    """The manifest must describe exactly what the tag will actually serve.
+
+    The updater downloads from raw.githubusercontent.com, which serves the
+    COMMITTED blob -- so a manifest generated from the working tree is a
+    statement about a different set of bytes, and two ways of being wrong have
+    already been found the hard way:
+
+      * A FILE GIT DOES NOT HAVE. `bash.exe.stackdump`, a Cygwin crash artifact,
+        appeared inside the plugin folder during a release. It is gitignored, so
+        raw.githubusercontent answers 404 -- and the updater cannot tell a 404
+        from a private repository, so every install would fail verification on a
+        file that was never meant to exist.
+
+      * DIFFERENT BYTES. Git normalises CRLF to LF on commit (.gitattributes
+        pins this), so a file that has never been through a checkout can hash
+        differently in the working tree than in the repository. That was caught
+        by hand before v3.1.0 and produces "expected 12071 bytes, got 11983" on
+        every device, which says nothing about its cause.
+
+    Both are checked here rather than remembered, because the failure lands on
+    other people's devices and there is no console on a Kindle.
+    """
+    listing = git("ls-files", "-z", "--", os.path.relpath(PLUGIN_DIR, REPO_ROOT))
+    if listing is None:
+        print("make_release: WARNING -- git is not available, so the manifest "
+              "could not be checked against what the repository will serve.")
+        return
+
+    prefix = os.path.relpath(PLUGIN_DIR, REPO_ROOT).replace("\\", "/") + "/"
+    tracked = set()
+    for name in listing.decode("utf-8").split("\0"):
+        if name.startswith(prefix):
+            tracked.add(name[len(prefix):])
+
+    untracked = [f["path"] for f in files if f["path"] not in tracked]
+    if untracked:
+        sys.exit("make_release: these files are in the plugin folder but not in "
+                 "git, so the release would list files nobody can download:\n  "
+                 + "\n  ".join(untracked)
+                 + "\n\nEither `git add` them, or remove them from the plugin "
+                   "folder if they are junk. Then run this again.")
+
+    differing = []
+    for f in files:
+        blob = git("show", ":" + prefix + f["path"])
+        if blob is None:
+            continue                      # staged-only oddity; the check above
+                                          # already proved git knows the path
+        if len(blob) != f["size"] or hashlib.sha256(blob).hexdigest() != f["sha256"]:
+            differing.append("%s (working tree %d bytes, repository %d)"
+                             % (f["path"], f["size"], len(blob)))
+    if differing:
+        sys.exit("make_release: these files differ between the working tree and "
+                 "what git has staged, so the manifest describes bytes the "
+                 "release will not serve (line endings are the usual cause):\n  "
+                 + "\n  ".join(differing)
+                 + "\n\n`git add` the plugin folder, then run this again.")
+
+    print("checked %d file(s) against the git index -- all match" % len(files))
 
 
 def bump_meta(version):
@@ -126,6 +203,8 @@ def main():
     if not any(f["path"] == "lib/updater.lua" for f in files):
         sys.exit("make_release: lib/updater.lua is missing -- an install that "
                  "took this release could never update again")
+
+    check_against_git(files)
 
     os.makedirs(UPDATE_DIR, exist_ok=True)
 

@@ -267,6 +267,24 @@ local function fuseCharacters(data, limit, last)
                         for _, a in ipairs(cc.aliases or {}) do
                             fused.aliases[#fused.aliases + 1] = a
                         end
+                        --[[
+                        The member's OWN name becomes an alias of the fused
+                        card, which is the only place it can still be found.
+
+                        The card is displayed under merged_name ("Van (Morisu
+                        Kyoichi)"), so after the reveal neither "Van" nor
+                        "Morisu Kyoichi" is any entry's name any more -- and a
+                        reader who highlights either word on the page, or types
+                        it into the search box, would be told no such character
+                        exists. It is safe to add here for the same reason the
+                        fusion is: this branch only runs for an identity the
+                        reader has met, on a card that only exists from the
+                        chapter the book made the connection.
+                        ]]
+                        fused.aliases[#fused.aliases + 1] = {
+                            alias = cc.name,
+                            first_chapter = visibleFrom(cc.first_chapter, last),
+                        }
                     end
                     for _, bc in ipairs(cc.by_chapter or {}) do
                         fused.by_chapter[#fused.by_chapter + 1] = {
@@ -332,10 +350,25 @@ local function buildCharacter(c, limit, last)
         end
     end
 
-    local aliases = {}
+    --[[
+    The other spellings the reader has already met, deduplicated.
+
+    Dedup matters here rather than upstream because a fused card unions the
+    alias lists of several identities AND adds each one's own name, so the same
+    string can arrive by two routes -- a nickname the model listed under both
+    halves of a person, say. Printed twice on a card it reads as a bug in the
+    analysis; matched twice by the highlight lookup it produces a picker
+    offering the same character to choose between.
+
+    The card's own name is skipped for the same reason: "Van — also known as:
+    Van" is noise.
+    ]]
+    local aliases, seen = {}, { [type(c.name) == "string" and c.name or ""] = true }
     for _, a in ipairs(c.aliases or {}) do
-        if type(a) == "table" and type(a.alias) == "string" and #a.alias > 0 then
+        if type(a) == "table" and type(a.alias) == "string" and #a.alias > 0
+            and not seen[a.alias] then
             if limit == nil or visibleFrom(a.first_chapter, last) <= limit then
+                seen[a.alias] = true
                 aliases[#aliases + 1] = a.alias
             end
         end
@@ -391,6 +424,29 @@ local function buildEvent(ev, last)
         chapter       = ev.chapter,
         chapter_index = visibleFrom(ev.chapter_index, last),
     }
+end
+
+--[[
+One heading per chapter inside the summary.
+
+The summary is a full page now (lib/ui/views.lua:showSummary), not a fifteen-
+second popup, so it is read rather than glanced at -- and a wall of two-sentence
+paragraphs with no landmarks is unreadable at any length. A heading gives the
+eye somewhere to land when a reader pages back looking for what happened in
+chapter nine, and it makes the boundary between "what I read yesterday" and
+"what I read this morning" visible at all.
+
+The chapter's own title is safe to print here twice over: it comes from the
+book's table of contents, which the reader can open from KOReader's own menu at
+any time, and only chapters they have already finished reach this loop.
+]]
+local function chapterHeading(loc, index, title)
+    local word = (loc and loc.t) and loc:t("chapter") or "Chapter"
+    local label = word .. " " .. index
+    if type(title) == "string" and #title > 0 and title ~= tostring(index) then
+        label = label .. " · " .. title
+    end
+    return "── " .. label .. " ──"
 end
 
 -- ---------------------------------------------------------- the filter ----
@@ -491,7 +547,7 @@ function GrimoriaPlugin:applyChapterFilter()
     for _, ch in ipairs(data.chapters or {}) do
         local at = tonumber(ch.index) or last
         if (limit == nil or at <= limit) and type(ch.summary) == "string" and #ch.summary > 0 then
-            parts[#parts + 1] = ch.summary
+            parts[#parts + 1] = chapterHeading(self.loc, at, ch.title) .. "\n" .. ch.summary
         end
     end
     self.summary = table.concat(parts, "\n\n")

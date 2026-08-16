@@ -650,6 +650,149 @@ do
     check(shown, "the held-back sentence reappears once the reveal has landed")
 end
 
+--[[
+Aliases, which are a new field and therefore a new way to leak.
+
+An alias has no reveal chapter attached -- it is printed next to the character's
+name from its own first_chapter onward -- so the one thing that must never end
+up in the list is the true name behind a disguise. The prompt says so at length
+and that is not the guarantee: prompt rules have failed twice in this plugin's
+history, once when five of six models named the murderer inside a theme.
+
+So the shape is checked structurally, and both directions matter. An alias that
+names another identity of the same person must wait for the merge; an ordinary
+nickname must NOT be delayed, or the feature is a spoiler filter that deleted
+the feature.
+]]
+print("\n=== an alias cannot smuggle in a hidden identity ===")
+do
+    local function build()
+        local raw = {
+            book_title = "T", author = "A", chapters = {},
+            characters = {
+                { name = "Van", first_chapter = 1, intro = "A student on the island.",
+                  -- One legitimate nickname, and one that is the whole twist.
+                  aliases = { { alias = "Van-kun", first_chapter = 3 },
+                              { alias = "Morisu Kyoichi", first_chapter = 1 } },
+                  by_chapter = {} },
+                { name = "Morisu Kyoichi", first_chapter = 12,
+                  intro = "A man living alone on the mainland.", by_chapter = {} },
+            },
+            identity_merges = { { names = { "Van", "Morisu Kyoichi" }, chapter = 47,
+                                  merged_name = "Van (Morisu Kyoichi)",
+                                  true_role = "Antagonist",
+                                  revelation = "They are the same person." } },
+            locations = {}, themes = {}, historical_figures = {},
+        }
+        for i = 1, 50 do
+            raw.chapters[i] = { index = i, title = "C" .. i, summary = "", events = {} }
+        end
+        return LLM:validateAndCleanData(raw)
+    end
+
+    local plain = build()
+    check(#plain.characters[1].aliases == 2,
+          "validateAndCleanData keeps aliases at all (they used to be dropped)")
+    check(plain.characters[1].aliases[1].alias ~= nil,
+          "and in the {alias=, first_chapter=} shape the filter reads")
+
+    -- Idempotent, because Archive:normalise runs this on every cache load.
+    local twice = LLM:validateAndCleanData(plain)
+    check(#twice.characters[1].aliases == 2, "a second validation pass does not duplicate them")
+
+    local before = sweepAt(build(), 21, "raw")
+    check(#before > 0, "the sweep sees the smuggled name before the guard runs ("
+          .. #before .. " found)")
+
+    local SpoilerGuard = require("lib/spoilerguard")
+    local guarded = SpoilerGuard.scan(build())
+    check(#sweepAt(guarded, 21, "guarded") == 0, "the guard closes it at ch20")
+
+    plugin.book_data = guarded
+    readThrough(20)
+    plugin:applyChapterFilter()
+    local card = plugin.characters[1]
+    check(card ~= nil and card.name == "Van", "Van's card is still there at ch20")
+    if card then
+        local shown = table.concat(card.aliases or {}, ",")
+        check(shown:find("Van%-kun") ~= nil,
+              "the ordinary nickname is NOT collateral damage (got: " .. shown .. ")")
+        check(not shown:find("Morisu", 1, true),
+              "the true name is not on the card yet (got: " .. shown .. ")")
+    end
+
+    -- Held back, not deleted -- same contract as every other guard action.
+    readThrough(47)
+    plugin:applyChapterFilter()
+    local fused = plugin.characters[1]
+    check(fused ~= nil and (fused.merge_chapter ~= nil),
+          "at ch47 the cards are fused")
+    if fused then
+        check(table.concat(fused.aliases or {}, ","):find("Morisu", 1, true) ~= nil,
+              "and the name the guard held back is finally shown")
+    end
+end
+
+--[[
+The highlight lookup, which is a question a reader can ask repeatedly.
+
+Every other view shows what the filter produced. This one takes input, and that
+makes it the one place where a reader could interrogate the analysis: highlight
+a name in chapter three, and if a card comes back, that name matters later. So
+what it searches has to be the filtered view and nothing else -- which is a
+property worth asserting rather than trusting to the applyChapterFilter() call
+at the top of the function staying there.
+]]
+print("\n=== the highlight lookup answers only about people already met ===")
+do
+    local Lookup = require("lib/ui/lookup")
+    for name, fn in pairs(Lookup) do plugin[name] = fn end
+
+    local raw = {
+        book_title = "T", author = "A", chapters = {},
+        characters = {
+            { name = "Mai", first_chapter = 1, intro = "A student.",
+              aliases = { { alias = "Linh", first_chapter = 8 } }, by_chapter = {} },
+            { name = "Bao", first_chapter = 30, intro = "The harbour master.",
+              by_chapter = {} },
+        },
+        locations = {}, themes = {}, historical_figures = {}, identity_merges = {},
+    }
+    for i = 1, 40 do
+        raw.chapters[i] = { index = i, title = "C" .. i, summary = "", events = {} }
+    end
+    plugin.book_data = LLM:validateAndCleanData(raw)
+    plugin.show_whole_book = false
+
+    readThrough(5)
+    plugin:applyChapterFilter()
+    local hits = plugin:matchCharactersInSelection("Mai turned to Bao and said nothing.")
+    check(#hits == 1 and hits[1].name == "Mai",
+          "at ch5 a sentence naming both returns only the one already met (" ..
+          #hits .. " hit(s))")
+
+    check(#plugin:matchCharactersInSelection("Maiden voyage") == 0,
+          "a name inside a longer word is not a match")
+    check(#plugin:matchCharactersInSelection("Linh nodded.") == 0,
+          "an alias tagged to a later chapter is not searchable yet")
+
+    readThrough(8)
+    plugin:applyChapterFilter()
+    local by_alias = plugin:matchCharactersInSelection("Linh nodded.")
+    check(#by_alias == 1 and by_alias[1].name == "Mai",
+          "...and is once the reader has met that spelling")
+
+    readThrough(30)
+    plugin:applyChapterFilter()
+    check(#plugin:matchCharactersInSelection("Mai turned to Bao and said nothing.") == 2,
+          "at ch30 both come back")
+
+    -- One character, several matching spellings, still one result: a picker
+    -- offering the same person twice is worse than no picker.
+    check(#plugin:matchCharactersInSelection("Mai, who everyone calls Linh") == 1,
+          "two spellings of one person are one hit")
+end
+
 print("\n=== a failed chapter lookup does not open the whole book ===")
 do
     local raw = { book_title = "T", author = "A", chapters = {},

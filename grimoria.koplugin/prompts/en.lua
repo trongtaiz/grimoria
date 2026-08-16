@@ -108,6 +108,17 @@ For each identity:
     text has not established BY THAT CHAPTER - and in particular no name
     the reader has not met yet.
   - first_chapter: the chapter where this identity first appears
+  - aliases: OTHER SPELLINGS OF THIS SAME NAME, and nothing else. A surname
+    used alone, a given name used alone, a nickname, a title the text uses
+    for them, a diminutive: [{ "alias": "Lizzy", "first_chapter": 3 }],
+    where first_chapter is the chapter the TEXT first uses that spelling.
+    THIS IS NOT WHERE A HIDDEN IDENTITY GOES. If "Van" turns out to be
+    Morisu Kyoichi in chapter 47, "Morisu Kyoichi" is NOT an alias of Van -
+    it is a separate character entry plus an identity_merges entry, which
+    is what carries the reveal chapter. An alias list has no reveal: it is
+    shown from its own first_chapter onward, so putting a true name in it
+    prints the twist on page one. Use [] if the text only ever uses the one
+    name.
   - by_chapter: an entry ONLY for chapters where this identity actually
     appears or is significantly discussed, 1-2 sentences on what they do IN
     THAT CHAPTER, never referencing an identity the text has not yet linked.
@@ -172,6 +183,22 @@ importance_in_book and context_in_book time-stamped lists of
 { "value": "...", "first_chapter": n }.
 ]],
 
+section_range = [[
+SECTION ANALYSIS: the text below is chapters %d to %d of a longer book, not the
+whole of it.
+
+1. The "=== CHAPTER n ===" markers carry the book's OWN chapter numbers and
+   start at %d. Use those numbers exactly as given, everywhere a chapter number
+   appears in your answer. Do NOT renumber the section to start at 1.
+2. Analyse only what is here. Do not describe, summarise or allude to chapters
+   before or after this range, and do not resolve anything the supplied text
+   leaves open - a reader may not have read the rest.
+3. The section begins in the middle of the story, so characters appear without
+   introduction and events refer back to things not shown. Set first_chapter to
+   the first chapter OF THIS RANGE where the identity appears, and write intros
+   from what this text establishes.
+]],
+
 section_author_bio = [[
 AUTHOR_BIO - the single exception to the grounding rules: the book text will
 not contain the author's biography, so use your general knowledge of the
@@ -208,6 +235,7 @@ gives you nothing:
       "occupation": [ { "value": "", "first_chapter": 1 } ],
       "intro": "one sentence, knowing only what a new reader knows",
       "first_chapter": 1,
+      "aliases": [ { "alias": "another spelling of THIS name", "first_chapter": 1 } ],
       "by_chapter": [ { "chapter": 1, "development": "1-2 sentences" } ]
     }
   ],

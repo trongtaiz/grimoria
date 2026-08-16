@@ -65,6 +65,13 @@ function GrimoriaPlugin:addToMainMenu(menu_items)
                 end,
             },
             {
+                text = self.loc:t("menu_appearances"),
+                keep_menu_open = true,
+                callback = function()
+                    self:showAppearancesPicker()
+                end,
+            },
+            {
                 text = self.loc:t("menu_character_notes"),
                 keep_menu_open = true,
                 callback = function()
@@ -120,6 +127,17 @@ function GrimoriaPlugin:addToMainMenu(menu_items)
                 keep_menu_open = true,
                 callback = function()
                     self:fetchFromAI()
+                end,
+            },
+            {
+                -- Sits directly under the ordinary fetch because it is the
+                -- answer to that one failing on a very long book, and a reader
+                -- who has just been told the reply was truncated should find
+                -- it without going looking.
+                text = self.loc:t("menu_fetch_range"),
+                keep_menu_open = true,
+                callback = function()
+                    self:fetchChapterRange()
                 end,
             },
             {

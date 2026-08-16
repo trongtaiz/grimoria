@@ -36,6 +36,15 @@ Two rules, both applied by moving text LATER rather than deleting it:
      the reader has not met. Such a value is re-tagged to the chapter that
      entity appears in.
 
+  3. ALIASES ARE NOT A BACK DOOR. An alias is displayed from its own
+     first_chapter with no reveal attached, so an alias that happens to be
+     another character's name -- or a merge sibling's -- would print the
+     connection the moment the card appears. Those are re-tagged to the
+     chapter the book itself makes the link. This one is not a matter of prose
+     going wrong: it is the single shape in which the alias field can hand
+     over a hidden identity, and it is checked by comparing names rather than
+     by searching text, so it neither misses nor false-positives.
+
 Re-tag, never delete: the model's sentence is usually correct and useful, it
 is simply timed wrongly, and a reader who reaches the reveal should get the
 whole card. Deleting would also make the guard destructive on a false
@@ -172,8 +181,14 @@ function SpoilerGuard.scan(data)
         local n = toInt(at, last)
         if meets[name] == nil or n < meets[name] then meets[name] = n end
     end
+    -- Which character owns a given name, so an alias can be told apart from a
+    -- reference to somebody else. Built before the alias pass below needs it.
+    local owner_of = {}
     for _, c in ipairs(data.characters or {}) do
-        if type(c) == "table" then note(c.name, c.first_chapter) end
+        if type(c) == "table" then
+            note(c.name, c.first_chapter)
+            if type(c.name) == "string" then owner_of[c.name] = c end
+        end
     end
     for _, l in ipairs(data.locations or {}) do
         if type(l) == "table" then note(l.name, l.first_chapter) end
@@ -182,11 +197,90 @@ function SpoilerGuard.scan(data)
     local retagged = 0
 
     --[[
+    RULE 3, applied first because it decides which alias spellings count as
+    "met" for rules 1 and 2.
+
+    An alias carries no reveal chapter. It appears the moment its own
+    first_chapter is reached, next to the character's name, which is precisely
+    what makes it dangerous: "Van — also known as: Morisu Kyoichi" from chapter
+    one is the whole twist, printed on a card with no prose in it for the text
+    matcher to find. So an alias that IS another character's name, or a merge
+    sibling of its owner, is moved to the chapter the book makes that link:
+
+      * a merge sibling  -> that merge's reveal chapter
+      * any other character's name -> the chapter that character appears, which
+        is the earliest point at which the reader can even tell the two names
+        refer to one person
+
+    Exact name comparison, not the text matcher: an alias field holds one name,
+    so there is nothing to search and no boundary to get wrong.
+    ]]
+    for _, c in ipairs(data.characters or {}) do
+        if type(c) == "table" and type(c.aliases) == "table" then
+            for _, a in ipairs(c.aliases) do
+                if type(a) == "table" and type(a.alias) == "string" then
+                    local now = toInt(a.first_chapter, last)
+                    local safe = now
+
+                    for _, group in ipairs(member[c.name] or {}) do
+                        for _, other in ipairs(group.others) do
+                            if other == a.alias and group.reveal > safe then
+                                safe = group.reveal
+                            end
+                        end
+                    end
+
+                    local other_owner = owner_of[a.alias]
+                    if other_owner and other_owner ~= c then
+                        local meet = toInt(other_owner.first_chapter, last)
+                        if meet > safe then safe = meet end
+                    end
+
+                    if safe > now then
+                        a.first_chapter = safe
+                        retagged = retagged + 1
+                        logger.info("SpoilerGuard: alias", a.alias, "of",
+                                    tostring(c.name), "held back from ch", now,
+                                    "to ch", safe, "-- it names another identity")
+                    end
+                end
+            end
+        end
+    end
+
+    --[[
+    Alias spellings the reader HAS met count as names for rules 1 and 2, so a
+    development that says "Lizzy" is measured the same way as one that says
+    "Elizabeth". An alias never makes a name available EARLIER than the
+    character themselves -- the whole card is hidden until first_chapter -- so
+    the later of the two is the honest answer.
+
+    alias_owner is what stops that from firing on the owner's OWN card. Rule 2
+    exempts a text from its owner's name; without the same exemption for the
+    owner's other spellings, a chapter-8 development of Elizabeth's that says
+    "Lizzy" would be held back to whatever chapter the alias is tagged with --
+    the guard hiding a sentence for naming the very person it is about.
+    ]]
+    local alias_owner = {}
+    for _, c in ipairs(data.characters or {}) do
+        if type(c) == "table" then
+            for _, a in ipairs(c.aliases or {}) do
+                if type(a) == "table" and type(a.alias) == "string" then
+                    note(a.alias, math.max(toInt(a.first_chapter, last),
+                                           toInt(c.first_chapter, last)))
+                    alias_owner[a.alias] = c.name
+                end
+            end
+        end
+    end
+
+    --[[
     The chapter a piece of text may not be shown before.
 
-    `owner` is the entity the text belongs to, so its own name never counts
-    against it. The answer is the latest of: the reveal chapter of any merge
-    sibling it names, and the first chapter of any entity it names.
+    `owner` is the entity the text belongs to, so neither its own name nor any
+    of its own aliases counts against it. The answer is the latest of: the
+    reveal chapter of any merge sibling it names, and the first chapter of any
+    entity it names.
     ]]
     local function earliestSafe(text, owner_name, current)
         local at = current
@@ -198,7 +292,13 @@ function SpoilerGuard.scan(data)
             end
         end
         for name, meet in pairs(meets) do
-            if name ~= owner_name and meet > at and SpoilerGuard.mentions(text, name) then
+            -- Spelled out rather than folded into one comparison because
+            -- owner_name is nil for a theme, which belongs to nobody -- and
+            -- `alias_owner[name] ~= nil` would then exempt every alias in the
+            -- book from the field models spoil most often.
+            local mine = (name == owner_name)
+                or (owner_name ~= nil and alias_owner[name] == owner_name)
+            if not mine and meet > at and SpoilerGuard.mentions(text, name) then
                 at = meet
             end
         end

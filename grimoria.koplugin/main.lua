@@ -54,6 +54,8 @@ mixin(GrimoriaPlugin, require("lib/ui/settings"), "lib/ui/settings")
 mixin(GrimoriaPlugin, require("lib/ui/versions"), "lib/ui/versions")
 mixin(GrimoriaPlugin, require("lib/ui/notes"), "lib/ui/notes")
 mixin(GrimoriaPlugin, require("lib/ui/views"), "lib/ui/views")
+mixin(GrimoriaPlugin, require("lib/ui/lookup"), "lib/ui/lookup")
+mixin(GrimoriaPlugin, require("lib/ui/appearances"), "lib/ui/appearances")
 mixin(GrimoriaPlugin, require("lib/updater"), "lib/updater")
 
 function GrimoriaPlugin:init()
@@ -66,6 +68,12 @@ function GrimoriaPlugin:init()
     
     self:onDispatcherRegisterActions()
 
+    -- The entry in KOReader's own highlight menu. Registered here rather than
+    -- in onReaderReady because ReaderHighlight is built with the reader view,
+    -- and a button added after the first highlight of the session would be
+    -- missing exactly when someone first goes looking for it.
+    self:registerHighlightLookup()
+
     -- Reaching this line means the plugin loaded and every module resolved,
     -- which is the only "the update worked" signal available on a device with
     -- no console. Clears the marker the updater left; keeps the backup.
@@ -75,6 +83,12 @@ function GrimoriaPlugin:init()
 end
 
 function GrimoriaPlugin:onReaderReady()
+    -- Second attempt at the highlight-menu entry. init() runs while ReaderUI is
+    -- still assembling itself and the order it builds its modules in is not
+    -- this plugin's to depend on, so ReaderHighlight may not have existed yet.
+    -- The call is a no-op once it has taken.
+    self:registerHighlightLookup()
+
     -- Auto-load cache when book is opened
     self:autoLoadCache()
 end

@@ -59,7 +59,7 @@ out of the same 64000-token completion budget, and that is already the model's
 ceiling, so a run that leaves little headroom is one truncation away from the
 effort step-down in `callChatGPT`.
 
-Seven free offline suites need no key and no book:
+Nine free offline suites need no key and no book:
 
 ```sh
 lua smoke_openrouter.lua ..   # provider table, routing, main.lua entry points
@@ -68,6 +68,8 @@ lua test_localization.lua ..  # language discovery, .po parity, format specifier
 lua test_wiring.lua ..        # every method resolves after the lib/ mixin
 lua test_updater.lua ..       # self-update: swap, rollback, revert
 lua test_spoiler.lua ..       # the governing rule, on synthetic fixtures
+lua test_mentions.lua ..      # appearance counting, the scan boundary, position restore
+lua test_range.lua ..         # section analyses keep the book's own chapter numbers
 
 # reads files written before the plugin was renamed; needs a built fixture
 python3 make_legacy_fixture.py tmp_fixture
@@ -86,7 +88,10 @@ endpoint names no private host and still routes, and that `main.lua` loads.
 `vi.po` rather than silently falling back to English, that the two `.po` files
 carry identical keys, that no key formats differently between them (a `%s` in
 one and not the other silently drops the value), and that every `loc:t()` call
-site in `main.lua` resolves.
+site resolves — across `main.lua` **and every file in `lib/`**. It read
+`main.lua` alone until Phase 3, which stopped being right when the plugin was
+split: almost every user-facing string is built in `lib/` now. The file list is
+written by hand inside the suite, so a new module has to be added to it.
 
 **Rebuild the legacy fixture before every run.** `test_legacy.lua` exercises
 *writes* as well as reads, so it mutates the fixture it was given; a second run
@@ -102,10 +107,27 @@ fixture is built by `make_legacy_fixture.py` because pure Lua cannot create a
 directory; the files in it are empty markers and a placeholder key, since the
 test only ever asks which path gets opened.
 
-`test_wiring.lua` loads the plugin and asserts all 80 methods are present after
-the eight `lib/` modules are mixed onto the class. Without it, a module left
+`test_wiring.lua` loads the plugin and asserts all 95 methods are present after
+the ten `lib/` modules are mixed onto the class. Without it, a module left
 off the mixin list loads perfectly and then fails with "attempt to call a nil
 value" the first time someone opens that menu.
+
+`test_mentions.lua` covers Chapter Appearances, and the three things it has to
+get right are each invisible when wrong. Counting a PERSON rather than a string:
+"Ellery Queen said. Ellery nodded." is two mentions, not three, so the spans
+every spelling matches are merged before counting. The BOUNDARY: the scan stops
+at the reader's position, because "appears 40× in chapter 50" says the character
+is alive in chapter 50 — the suite asserts that a character who only appears
+past the limit has no count anywhere in the result. And the reading POSITION,
+which building the chapter list moves and the scan has to put back.
+
+`test_range.lua` covers section analyses, and really covers one number. Asking
+for chapters 30-40 must emit `=== CHAPTER 30 ===` first, never renumbering the
+range to start at 1 — renumbering is the obvious implementation and breaks
+everything quietly, because the model tags its answer with the numbers it was
+given and the spoiler filter compares those against `getChapterList`. It also
+checks that a whole-book run reports no range at all, since that is what decides
+whether the prompt tells the model it is only seeing part of the book.
 
 `test_spoiler.lua` is the acceptance test for the spoiler design. Where
 `test_filter.lua` checks that one known reveal is handled correctly,
@@ -183,7 +205,7 @@ from it (extracted text, built prompt, model replies) is written beside it in
 `private/`, which `.gitignore` excludes in full.
 
 The consequence is worth stating plainly: **for a fresh clone, steps 1–5 and
-`test_filter.lua` cannot run.** The five offline suites above work out of the
+`test_filter.lua` cannot run.** The nine offline suites above work out of the
 box; nothing that needs a book does.
 
 ## Choosing one

@@ -3,7 +3,7 @@
  "files": [
   {
    "path": "_meta.lua",
-   "sha256": "b6eac6e3ad2bbe8563cc8a41ba1c4c3dc664f0c9f3e41da9e15ed1f753219e14",
+   "sha256": "6b80a95a221237e1c56150be06d35b3ac557bc52d7bca5d907f08e4fd6202205",
    "size": 353
   },
   {
@@ -13,33 +13,33 @@
   },
   {
    "path": "main.lua",
-   "sha256": "136b130342fa79ca2cb36ea32c1ef3b8bce37467d0a99b8e8bc67998964ce70c",
-   "size": 5962
+   "sha256": "6d4a63b54a6d6962bdfca79859b7ed485c19d6c43394938b1320808957476a3a",
+   "size": 6755
   },
   {
    "path": "languages/en.po",
-   "sha256": "a935a16ad645a5b74aeb2a8219170809a8c8eba7ea8fe28f5a37ee31125c97b8",
-   "size": 21246
+   "sha256": "98b09ccb8ad7f076b67f4e683807161aa1b4360b3e7e6463240f88c50f0752e1",
+   "size": 22898
   },
   {
    "path": "languages/vi.po",
-   "sha256": "6da781c4d7210d329a7b419661d642a68e8dcf5dc53dc900bd35b603970ec512",
-   "size": 23695
+   "sha256": "d8bed43f0395690d44728f947b6914d5c7bd4528b7c8f9613c61d9bb3c385d42",
+   "size": 25683
   },
   {
    "path": "lib/archive.lua",
-   "sha256": "7baacb67237e46686e6728f4a877b114dde7f8da235910c0676fc8a2ff82e3aa",
-   "size": 20189
+   "sha256": "419b46679b11ec21b7656e7eba19ed90c5657719bc8b49441a12deed2a08f347",
+   "size": 23867
   },
   {
    "path": "lib/booktext.lua",
-   "sha256": "bf52b3cea4e2a246aa3df8eccaee0f4044149a5bb7bcdc1de3a034734c1246f6",
-   "size": 14689
+   "sha256": "7b9c1b2715dc7c5032dcff31e4b6bd8c5a8d11e792a316e5f1d24313dc522499",
+   "size": 16530
   },
   {
    "path": "lib/fetch.lua",
-   "sha256": "0021351151527d010ae756cdd3f79ebb7703b0a8202aeb8fea1b294e79b11299",
-   "size": 24369
+   "sha256": "cc3b38331d15cb2bdb5c16f34b50da80128f6ca94a225825c65d9a4f1f08aecf",
+   "size": 28434
   },
   {
    "path": "lib/i18n.lua",
@@ -48,8 +48,8 @@
   },
   {
    "path": "lib/llm.lua",
-   "sha256": "ee824c43a6ca1477632121030a3a6179bf358441351e60f7be7fe86a858e9ce6",
-   "size": 85656
+   "sha256": "05e3c8661eda0964291568e5106ac05c5a0a41eb7a4b4675a589891b28f5994d",
+   "size": 89101
   },
   {
    "path": "lib/marginalia.lua",
@@ -58,8 +58,8 @@
   },
   {
    "path": "lib/mentions.lua",
-   "sha256": "dfdb06e08f568841233aa8712e0dd918cb73def54505e07eb67e8a353e18072b",
-   "size": 5171
+   "sha256": "d36165eb35439fdc8724da292ec6769e10ad6445c1f5ee25dd1bf9be2d220bea",
+   "size": 11703
   },
   {
    "path": "lib/paths.lua",
@@ -68,13 +68,13 @@
   },
   {
    "path": "lib/spoilerguard.lua",
-   "sha256": "5d8c1ad43656a1c44a8107d822c403bbe4760103e4bd330b2148c02feaff5773",
-   "size": 13136
+   "sha256": "e78d7c3555be3b1fb867a82ed67c1e2517e289348ef2d8b13f2e8734992214d0",
+   "size": 18057
   },
   {
    "path": "lib/spoilers.lua",
-   "sha256": "9dd9cf33152dc12bd6ce7ed4b896814dc18328b9076d4c6f1f68a13bae4bb864",
-   "size": 25270
+   "sha256": "2c4468bfc54f52cb23a74f069c26a01e769eb9f20f2b661f8f58f226518d211a",
+   "size": 28227
   },
   {
    "path": "lib/updater.lua",
@@ -82,9 +82,19 @@
    "size": 33541
   },
   {
+   "path": "lib/ui/appearances.lua",
+   "sha256": "dc214992afde9a164b19804a5bfd537a8de8a9ebec2ac026de7e8db81520a229",
+   "size": 10507
+  },
+  {
+   "path": "lib/ui/lookup.lua",
+   "sha256": "d36143b8bb70f1b1db5e093c818ef44207d030389bfefe57b6b8b69f205dfb71",
+   "size": 7950
+  },
+  {
    "path": "lib/ui/menu.lua",
-   "sha256": "e206baf13435757eea2a1f90cf08c0d564eb88257f4f8809ac3b094c12c79390",
-   "size": 18898
+   "sha256": "ad5c4c40982394e11603d796508c917bdacadff6b5f0d92d17f0798c2e427d8e",
+   "size": 19635
   },
   {
    "path": "lib/ui/notes.lua",
@@ -98,20 +108,20 @@
   },
   {
    "path": "lib/ui/versions.lua",
-   "sha256": "6f78452b048a5065550049ea6f546bf64ac282e11a021fed58b06b3cd60cdb99",
-   "size": 11202
+   "sha256": "9961fac759f6fc7dda32c290e0aa5bbffce7deb9cc178487a024a816f17d18a9",
+   "size": 11663
   },
   {
    "path": "lib/ui/views.lua",
-   "sha256": "085445412a40eb214592c4a7125a451b7d120eabda9413d4f2e320c98ef79291",
-   "size": 20015
+   "sha256": "4cedbb8981de8cfdeb7d3c7d9e253c25a6b0d6213a5e5c628b3b5e138fefe705",
+   "size": 23846
   },
   {
    "path": "prompts/en.lua",
-   "sha256": "68eba8b5f74a7deb31038499954ca777bb0ece540d87050c1a8bd3a25750d2ff",
-   "size": 11653
+   "sha256": "853a8fca3304eb91a120258eddcb98c29632f63af43ae30868e0054e2af6c60c",
+   "size": 13322
   }
  ],
- "tag": "v3.1.0",
- "version": "3.1.0"
+ "tag": "v3.2.0",
+ "version": "3.2.0"
 }

@@ -858,3 +858,66 @@ msgstr "Cập nhật thất bại, và không thể tự động khôi phục b�
 
 msgid "showing_nothing_yet"
 msgstr "Chưa có gì để hiện — hãy đọc xong chương 1 đã."
+
+msgid "also_known_as"
+msgstr "Còn được gọi là:"
+
+msgid "lookup_in_grimoria"
+msgstr "Tra trong Grimoria"
+
+msgid "lookup_nothing"
+msgstr "Chưa có nhân vật nào tên như vậy trong phần bạn đã đọc."
+
+msgid "lookup_several"
+msgstr "Nhân vật nào?"
+
+msgid "lookup_no_selection"
+msgstr "Bạn chưa chọn chữ nào."
+
+msgid "lookup_too_long"
+msgstr "Đó là cả một đoạn văn, không phải một cái tên. Hãy chọn riêng cái tên."
+
+msgid "menu_appearances"
+msgstr "Xuất hiện theo chương"
+
+msgid "characters_hint"
+msgstr "Chạm để xem thẻ, giữ để xem xuất hiện theo chương"
+
+msgid "scan_starting"
+msgstr "Đang đọc các chương bạn đã đọc xong…"
+
+msgid "scan_progress"
+msgstr "Đang đếm lần xuất hiện… chương %d trên %d"
+
+msgid "scan_summary"
+msgstr "%d lần nhắc đến trong %d chương — chạm một dòng để tới đó"
+
+msgid "scan_failed"
+msgstr "Không đọc được nội dung các chương."
+
+msgid "scan_cancelled"
+msgstr "Đã huỷ quét."
+
+msgid "scan_no_appearances"
+msgstr "Cách viết tên %s không xuất hiện trong phần bạn đã đọc."
+
+msgid "scan_no_jump"
+msgstr "Không thể chuyển trang từ đây với sách này."
+
+msgid "scan_needs_chapter_view"
+msgstr "Tính năng này cần chế độ lọc theo chương. Hãy tắt chế độ xem toàn sách trước."
+
+msgid "menu_fetch_range"
+msgstr "Phân tích một khoảng chương…"
+
+msgid "range_pick_first"
+msgstr "Bắt đầu từ chương nào?"
+
+msgid "range_pick_last"
+msgstr "Kết thúc ở chương nào?"
+
+msgid "range_confirm"
+msgstr "Phân tích chương %d đến %d (%d chương)?\n\nĐây là một lần gọi AI và có tính phí. Số chương vẫn giữ nguyên theo sách, nên kết quả vẫn lọc theo vị trí đọc y như khi phân tích cả sách."
+
+msgid "range_not_useful"
+msgstr "Sách này không có mục lục dùng được để chọn khoảng chương."

@@ -139,31 +139,53 @@ check(#mismatched == 0, "no key formats differently between languages (" ..
       (#mismatched > 0 and table.concat(mismatched, ", ") or "all agree") .. ")")
 
 --[[
-Every key main.lua asks for must resolve somewhere. A key that exists in
+Every key the plugin asks for must resolve somewhere. A key that exists in
 neither the .po files nor the fallback table renders as the raw key name --
 "menu_characters" on a button -- which is the exact failure a rename of the
 key vocabulary produces, and it is invisible until someone opens that menu.
+
+This used to read main.lua alone, which was true of the plugin before the
+split and has been wrong since: main.lua is a shell now and essentially every
+user-facing string is built in lib/. Pure Lua cannot walk a directory, so the
+files are listed by hand -- the same reasoning as the EXPECTED table in
+test_wiring.lua, and a list that misses a file only weakens the check rather
+than breaking it.
 ]]
 print("\n=== every t() call site resolves ===")
-local src = assert(io.open(plugin_dir .. "/main.lua", "r"))
-local main_src = src:read("*a")
-src:close()
+local SOURCES = {
+    "main.lua",
+    "lib/spoilers.lua", "lib/fetch.lua", "lib/updater.lua", "lib/archive.lua",
+    "lib/marginalia.lua", "lib/mentions.lua",
+    "lib/ui/menu.lua", "lib/ui/settings.lua", "lib/ui/versions.lua",
+    "lib/ui/notes.lua", "lib/ui/views.lua", "lib/ui/lookup.lua",
+    "lib/ui/appearances.lua",
+}
 
-local unresolved, seen = {}, {}
-for key in main_src:gmatch('loc:t%("([%w_]+)"') do
-    if not seen[key] then
-        seen[key] = true
-        -- t() falls back to the table inside the module, so ask t() itself:
-        -- a key resolving to its own name is the failure.
-        if en[key] == nil and Loc:t(key) == key then
-            table.insert(unresolved, key)
+local unresolved, seen, scanned = {}, {}, 0
+for _, rel in ipairs(SOURCES) do
+    local f = io.open(plugin_dir .. "/" .. rel, "r")
+    if f then
+        scanned = scanned + 1
+        local body = f:read("*a")
+        f:close()
+        for key in body:gmatch('loc:t%("([%w_]+)"') do
+            if not seen[key] then
+                seen[key] = true
+                -- t() falls back to the table inside the module, so ask t()
+                -- itself: a key resolving to its own name is the failure.
+                if en[key] == nil and Loc:t(key) == key then
+                    table.insert(unresolved, key)
+                end
+            end
         end
+    else
+        table.insert(unresolved, "<unreadable: " .. rel .. ">")
     end
 end
 table.sort(unresolved)
 local n = 0
 for _ in pairs(seen) do n = n + 1 end
-check(#unresolved == 0, n .. " keys used by main.lua all resolve (" ..
+check(#unresolved == 0, n .. " keys used across " .. scanned .. " files all resolve (" ..
       (#unresolved > 0 and ("unresolved: " .. table.concat(unresolved, ", ")) or "none dangling") .. ")")
 
 print("\nRESULT: " .. (fails == 0 and "all checks passed" or (fails .. " CHECK(S) FAILED")))

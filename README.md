@@ -98,6 +98,28 @@ with the book. You can keep **several analyses per book** — from different
 models, say — and switch between them offline under
 **Menu → Grimoria → Analysis versions**.
 
+**Very long books** can ask for more per-chapter detail than one reply is
+allowed to hold, and the fallback is to drop chapters off the end. If that
+happens, use **Menu → Grimoria → Analyse a chapter range…** and take the book in
+two halves. The chapter numbers stay the book's own, so the halves filter by
+your reading position exactly like a full analysis.
+
+## Once it's analysed
+
+Everything below is local: no network, no cost, and it works with wifi off.
+
+- **Highlight a name on the page → "Look up in Grimoria"** opens that
+  character's card. It only searches people you have already met, so it cannot
+  be used to ask whether a name matters later.
+- **Chapter appearances** — hold a name in the character list, or
+  **Menu → Grimoria → Chapter appearances** — draws where in the book that
+  person actually shows up, counted from the text itself, with a tap to jump
+  there. It stops at the chapter you have reached: knowing somebody is named
+  forty times in chapter 50 would tell you they survive to chapter 50.
+- **The summary, themes and every card open as a full page** you can turn and
+  close when you're done, with a heading per chapter — not a popup that
+  disappears after fifteen seconds.
+
 ## What it costs
 
 Measured on a 56-chapter novel (~420k characters) through OpenRouter:
@@ -178,8 +200,15 @@ Environment variables: `GEMINI_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`,
   from the end when it must.
 - **Text extraction needs a table of contents.** A book with no TOC has no
   chapters to tag against.
-- **Historical figures aren't filtered by chapter**, by design — they're real
-  people, and knowing who Napoleon was spoils nothing.
+- **Hiding is the default when the model tells us nothing.** An entry with no
+  chapter on it is treated as end-of-book, so a character the model forgot to
+  place stays hidden until you finish. That reads as the plugin losing a
+  character, and it is the right way round: the other error hands you the plot.
+  The whole-book toggle is one tap away.
+- **The chapter you are currently in is not shown**, only the ones you have
+  finished — so there is nothing on chapter 1, and a chapter you just finished
+  appears when you turn into the next one. Set `include_current_chapter.txt` to
+  `1` if you would rather have it the other way.
 - **The model is not perfect.** It occasionally misjudges which chapter a
   revelation lands in. The design limits the blast radius; it can't eliminate
   it.
@@ -190,7 +219,7 @@ Environment variables: `GEMINI_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`,
 There's no build step. The `grimoria.koplugin/` folder *is* the artifact — copy it
 to a device and restart.
 
-Five test suites run offline with no API key and no book:
+Nine test suites run offline with no API key and no book:
 
 ```sh
 cd grimoria.koplugin/test
@@ -198,6 +227,10 @@ lua smoke_openrouter.lua ..   # provider table, routing, entry points
 lua test_cancel.lua ..        # the cancel confirmation on an in-flight fetch
 lua test_localization.lua ..  # language discovery, .po parity, format specifiers
 lua test_wiring.lua ..        # every method resolves after the lib/ mixin
+lua test_updater.lua ..       # self-update: staged swap, rollback, revert
+lua test_spoiler.lua ..       # the spoiler property, on synthetic fixtures
+lua test_mentions.lua ..      # appearance counting, boundary, reading position
+lua test_range.lua ..         # chapter-range analyses keep the book's numbering
 lua test_legacy.lua .. <fixture>   # reading files from before the rename
 ```
 

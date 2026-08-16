@@ -271,13 +271,32 @@ end
 --[[
 extract(ui, opts) -> text, meta   |   nil, error_code
 
-opts.max_chars  hard cap on the returned string (default MAX_CHARS_DEFAULT)
+opts.max_chars      hard cap on the returned string (default MAX_CHARS_DEFAULT)
+opts.first_chapter  first chapter to include (default 1)
+opts.last_chapter   last chapter to include (default: all of them)
 
-meta = { chapter_count, chapters_included, truncated, chapter_titles }
+meta = { chapter_count, chapters_included, truncated, chapter_titles,
+         first_chapter, last_chapter }
 
-Truncation drops the END of the book rather than the beginning: early chapters
+Truncation drops the END of the range rather than the beginning: early chapters
 are what a reader partway through can safely be shown, and the per-chapter
 filter means missing late chapters degrades gracefully.
+
+SECTION ANALYSES, AND THE ONE THING THAT MUST NOT CHANGE
+
+A very long book can ask for more per-chapter output than the reply is allowed
+to hold, and when the ladder in lib/llm.lua runs out it starts dropping whole
+chapters off the end. Analysing a range instead lets a reader spend two smaller
+requests and lose nothing.
+
+The chapter numbers stay ABSOLUTE. Asking for chapters 30-40 emits
+"=== CHAPTER 30 ===" first, not "=== CHAPTER 1 ===". Renumbering from 1 would
+be the obvious implementation and would break everything downstream at once:
+the model tags its answer with the numbers it was given, the reading-position
+filter compares those tags against getChapterList's numbering, and the two
+would be ten apart -- so a reader at chapter 35 would be shown material from
+chapter 45. Same rule as everywhere else in this file: getChapterList is the
+single source of chapter numbering.
 ]]
 function BookText:extract(ui, opts)
     opts = opts or {}
@@ -300,7 +319,15 @@ function BookText:extract(ui, opts)
         local included, truncated = 0, false
         local titles = {}
 
-        for i, ch in ipairs(chapters) do
+        -- Clamped rather than trusted: the picker offers real chapters, but a
+        -- setting or a stale range could name one that no longer exists, and
+        -- an empty extraction reports as "the book could not be read".
+        local from = math.max(1, math.floor(tonumber(opts.first_chapter) or 1))
+        local to = math.min(#chapters, math.floor(tonumber(opts.last_chapter) or #chapters))
+        if to < from then from, to = 1, #chapters end
+
+        for i = from, to do
+            local ch = chapters[i]
             local title = ch.title or ("Chapter " .. i)
             titles[#titles + 1] = title
 
@@ -352,6 +379,10 @@ function BookText:extract(ui, opts)
             truncated         = truncated,
             chapter_titles    = titles,
             grouped           = grouped,
+            -- Absolute, and only set when this was a section run: the prompt
+            -- has to state the range, and the version picker records it.
+            first_chapter     = (from > 1 or to < #chapters) and from or nil,
+            last_chapter      = (from > 1 or to < #chapters) and to or nil,
             -- Ceiling on per-chapter entries the model should emit, so the
             -- reply fits the output budget. Scaled by how many chapters there
             -- actually are; small books get no artificial limit.

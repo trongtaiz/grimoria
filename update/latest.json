@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Self-update from GitHub, and a spoiler filter that no longer shows the chapter you are reading.",
- "tag": "v3.1.0",
+ "notes": "Look up in Grimoria from the highlight menu, chapter appearances, full-page summary and cards, chapter-range analyses.",
+ "tag": "v3.2.0",
  "updater_version": 1,
- "version": "3.1.0"
+ "version": "3.2.0"
 }

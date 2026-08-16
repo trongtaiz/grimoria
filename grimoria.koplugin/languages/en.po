@@ -854,3 +854,66 @@ msgstr "The update failed, and the previous version could not be put back automa
 
 msgid "showing_nothing_yet"
 msgstr "Nothing to show yet — finish chapter 1 first."
+
+msgid "also_known_as"
+msgstr "Also known as:"
+
+msgid "lookup_in_grimoria"
+msgstr "Look up in Grimoria"
+
+msgid "lookup_nothing"
+msgstr "No character of that name in what you have read so far."
+
+msgid "lookup_several"
+msgstr "Which one?"
+
+msgid "lookup_no_selection"
+msgstr "Nothing was selected."
+
+msgid "lookup_too_long"
+msgstr "That is a passage, not a name. Select just the name."
+
+msgid "menu_appearances"
+msgstr "Chapter appearances"
+
+msgid "characters_hint"
+msgstr "Tap for the card, hold for chapter appearances"
+
+msgid "scan_starting"
+msgstr "Reading the chapters you have finished…"
+
+msgid "scan_progress"
+msgstr "Counting appearances… chapter %d of %d"
+
+msgid "scan_summary"
+msgstr "%d mentions across %d chapters — tap one to go there"
+
+msgid "scan_failed"
+msgstr "The chapters could not be read."
+
+msgid "scan_cancelled"
+msgstr "Scan cancelled."
+
+msgid "scan_no_appearances"
+msgstr "%s is not named by that spelling in what you have read."
+
+msgid "scan_no_jump"
+msgstr "This book cannot be navigated from here."
+
+msgid "scan_needs_chapter_view"
+msgstr "Chapter appearances need the chapter view. Turn whole-book view off first."
+
+msgid "menu_fetch_range"
+msgstr "Analyse a chapter range…"
+
+msgid "range_pick_first"
+msgstr "Start at which chapter?"
+
+msgid "range_pick_last"
+msgstr "End at which chapter?"
+
+msgid "range_confirm"
+msgstr "Analyse chapters %d to %d (%d chapters)?\n\nThis is one AI request and costs money. The chapter numbers stay the book's own, so the result filters by your reading position exactly like a full analysis."
+
+msgid "range_not_useful"
+msgstr "This book has no usable chapter list to pick a range from."

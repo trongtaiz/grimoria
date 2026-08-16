@@ -659,6 +659,21 @@ function LLM:createPrompt(title, author, context)
             context.chapter_count, context.dev_budget or 700)
     end
 
+    --[[
+    A section run, which is a different request in one respect that matters:
+    the chapter numbers do not start at 1.
+
+    Placed just before the book text rather than up with the other sections, so
+    the instruction and the "=== CHAPTER 30 ===" marker it is about are as
+    close together as the prompt allows. p.section_range is optional in a
+    locale file like every other key, so a translation that has not caught up
+    falls back to the English one.
+    ]]
+    if context.first_chapter and context.last_chapter and p.section_range then
+        parts[#parts + 1] = string.format(p.section_range,
+            context.first_chapter, context.last_chapter, context.first_chapter)
+    end
+
     if context.book_text and #context.book_text > 0 then
         local note = ""
         if context.truncated then
@@ -874,8 +889,10 @@ function LLM:callGemini(prompt, config, state)
                     end
                     return nil, "error_max_tokens",
                         "The book is long enough that the reply keeps hitting the size limit.\n\n" ..
-                        "Lower the value in settings/grimoria/max_text_chars.txt\n" ..
-                        "(try 500000) and analyse again."
+                        "Use Grimoria -> \"Analyse a chapter range\" and take the book in\n" ..
+                        "two halves. That keeps every chapter; shrinking the text instead\n" ..
+                        "drops the end of the book.\n\n" ..
+                        "Or lower settings/grimoria/max_text_chars.txt (try 500000)."
                 end
 
                 if candidate.content and candidate.content.parts then
@@ -1336,8 +1353,10 @@ function LLM:callChatGPT(prompt, config, state)
                     end
                     return nil, "error_max_tokens",
                         "The book is long enough that the reply keeps hitting the size limit.\n\n" ..
-                        "Lower the value in settings/grimoria/max_text_chars.txt\n" ..
-                        "(try 500000) and analyse again."
+                        "Use Grimoria -> \"Analyse a chapter range\" and take the book in\n" ..
+                        "two halves. That keeps every chapter; shrinking the text instead\n" ..
+                        "drops the end of the book.\n\n" ..
+                        "Or lower settings/grimoria/max_text_chars.txt (try 500000)."
                 end
 
                 if choice.message and choice.message.content
@@ -1578,6 +1597,47 @@ function LLM:validateAndCleanData(data)
         return out
     end
 
+    --[[
+    Aliases: the other spellings the text uses for one identity.
+
+    Same shape rules as toTagged and the same reason for each of them -- this
+    function runs on every cache LOAD as well as every fresh reply, so an
+    already-cleaned {alias=, first_chapter=} must clean rather than be wrapped
+    again, and a bare list of strings (what a model that skimmed the schema
+    sends) has no chapter information and so lands on end-of-book.
+
+    Duplicates are dropped because a fused card unions the alias lists of every
+    identity it absorbs, and a name arriving twice would print twice on the
+    card. Doing it here rather than at the display end keeps the stored payload
+    the thing that is actually correct.
+
+    What is NOT enforced here is the important part, and it cannot be: nothing
+    in the shape distinguishes "Lizzy, another word for Elizabeth" from
+    "Morisu Kyoichi, who Van turns out to be". The prompt asks for the first
+    and lib/spoilerguard.lua catches the second structurally -- an alias that
+    is another character's name, or a merge sibling's, is held back to the
+    chapter that connection is made. The prompt rule alone would not be enough;
+    prompt rules have failed twice in this file's history.
+    ]]
+    local function toAliases(v, dflt)
+        local out, seen = {}, {}
+        if type(v) ~= "table" then return out end
+        for _, item in ipairs(v) do
+            local alias, at
+            if type(item) == "table" and type(item.alias) == "string" and #item.alias > 0 then
+                alias, at = item.alias, toInt(item.first_chapter, dflt)
+            elseif type(item) == "string" and #item > 0 then
+                alias, at = item, dflt
+            end
+            if alias and not seen[alias] then
+                seen[alias] = true
+                out[#out + 1] = { alias = alias, first_chapter = at }
+            end
+        end
+        table.sort(out, function(a, b) return a.first_chapter < b.first_chapter end)
+        return out
+    end
+
     local chars = data.characters or data.Characters or {}
     local valid_chars = {}
     for _, c in ipairs(chars) do
@@ -1626,6 +1686,11 @@ function LLM:validateAndCleanData(data)
                 intro = intro,
                 first_chapter = toInt(c.first_chapter,
                     by_chapter[1] and by_chapter[1].chapter or last_chapter),
+                -- An untagged alias is end-of-book like every other untagged
+                -- thing: a spelling the reader has not met is a spelling that
+                -- can give something away, and there is nothing here to derive
+                -- a real chapter from.
+                aliases = toAliases(c.aliases, last_chapter),
                 by_chapter = by_chapter,
             })
         end

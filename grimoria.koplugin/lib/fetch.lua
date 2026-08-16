@@ -202,6 +202,83 @@ function GrimoriaPlugin:askSpoilerPreference()
 end
 
 --[[
+Analyse part of a long book.
+
+Why this exists: the reply has a 65,536-token budget shared with the model's
+thinking pass, and a very long novel asks for more per-chapter output than fits.
+The truncation ladder in lib/llm.lua steps effort down, then asks for brevity,
+and when both are exhausted it starts dropping chapters off the END of the book
+-- so the analysis silently stops covering the last third. Two requests over two
+ranges cost roughly the same money and lose nothing.
+
+The chapters offered come from BookText:getChapterList, never from a fresh
+doc:getToc(). On a book whose table of contents exceeds MAX_CHAPTERS the list is
+bucketed, and a range picked off the raw TOC would name chapters the analysis
+does not number the same way -- the reader would choose "30 to 40" and get some
+other ten chapters, with nothing anywhere saying so.
+]]
+function GrimoriaPlugin:fetchChapterRange()
+    local BookText = require("lib/booktext")
+    local chapters = BookText:getChapterList(self.ui)
+
+    if not chapters or #chapters < 2 then
+        UIManager:show(InfoMessage:new{ text = self.loc:t("range_not_useful"), timeout = 4 })
+        return
+    end
+
+    self:pickChapter(chapters, 1, self.loc:t("range_pick_first"), function(first)
+        -- The second picker starts at the first pick, so an invalid range
+        -- cannot be chosen rather than being rejected after the fact.
+        self:pickChapter(chapters, first, self.loc:t("range_pick_last"), function(last)
+            local ConfirmBox = require("ui/widget/confirmbox")
+            UIManager:show(ConfirmBox:new{
+                text = string.format(self.loc:t("range_confirm"), first, last,
+                                     last - first + 1),
+                ok_text = self.loc:t("confirm_analyze"),
+                cancel_text = self.loc:t("cancel"),
+                ok_callback = function()
+                    self:continueWithFetch(100, { first = first, last = last })
+                end,
+                cancel_callback = function()
+                    UIManager:show(InfoMessage:new{
+                        text = self.loc:t("fetch_cancelled"), timeout = 3,
+                    })
+                end,
+            })
+        end)
+    end)
+end
+
+-- One chapter out of the canonical list, from `from` onward.
+function GrimoriaPlugin:pickChapter(chapters, from, title, on_pick)
+    local menu
+    local items = {}
+    for i = from, #chapters do
+        local label = string.format("%s %d", self.loc:t("chapter"), i)
+        local t = chapters[i].title
+        if type(t) == "string" and #t > 0 then label = label .. " · " .. t end
+        items[#items + 1] = {
+            text = label,
+            callback = function()
+                UIManager:close(menu)
+                on_pick(i)
+            end,
+        }
+    end
+
+    menu = Menu:new{
+        title = title,
+        item_table = items,
+        is_borderless = true,
+        is_popout = false,
+        title_bar_fm_style = true,
+        width = Screen:getWidth(),
+        height = Screen:getHeight(),
+    }
+    UIManager:show(menu)
+end
+
+--[[
 Keep the device awake for as long as a fetch is running.
 
 A whole-book analysis runs for minutes -- the worst case seen in practice is
@@ -249,7 +326,12 @@ function GrimoriaPlugin:releaseDeviceAwake()
     logger.info("GrimoriaPlugin: released the device sleep hold")
 end
 
-function GrimoriaPlugin:continueWithFetch(reading_percent)
+-- `range` is { first = , last = } for a section analysis, nil for the whole
+-- book. Threaded as a parameter rather than parked on self: a fetch that was
+-- cancelled halfway would otherwise leave the range set, and the NEXT run --
+-- started from the ordinary menu entry, with a confirmation that said "the
+-- whole book" -- would quietly analyse ten chapters.
+function GrimoriaPlugin:continueWithFetch(reading_percent, range)
     logger.info("GrimoriaPlugin: Continuing with fetch process (reading_percent:", reading_percent, ")")
     
     -- 1. Start the cache manager (needed for the lookup below)
@@ -305,7 +387,7 @@ function GrimoriaPlugin:continueWithFetch(reading_percent)
         self:holdDeviceAwake()
         local ok, err = pcall(function()
             self:runFetch(book_path, title, author, selected_provider,
-                          provider_config, provider_name, current_model)
+                          provider_config, provider_name, current_model, range)
         end)
         self:releaseDeviceAwake()
 
@@ -388,7 +470,7 @@ end
 -- The fetch itself. Split out of continueWithFetch so the sleep-hold above can
 -- wrap it in a pcall; runs inside Trapper:wrap, so it may yield.
 function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
-                             provider_config, provider_name, current_model)
+                             provider_config, provider_name, current_model, range)
     local Trapper = require("ui/trapper")
     local InfoMessage = require("ui/widget/infomessage")
 
@@ -398,6 +480,8 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
         local BookText = require("lib/booktext")
         local book_text, meta = BookText:extract(self.ui, {
             max_chars = self:getMaxCharsSetting(),
+            first_chapter = range and range.first or nil,
+            last_chapter = range and range.last or nil,
         })
 
         if not book_text then
@@ -417,6 +501,11 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
             truncated = meta and meta.truncated or false,
             chapter_count = meta and meta.chapters_included or nil,
             dev_budget = meta and meta.dev_budget or nil,
+            -- Taken from the extractor rather than from `range`, because the
+            -- extractor is what clamped the request to chapters that exist --
+            -- and the prompt must state the range that was actually sent.
+            first_chapter = meta and meta.first_chapter or nil,
+            last_chapter = meta and meta.last_chapter or nil,
         }
 
         --[[
@@ -552,6 +641,8 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
             provider = selected_provider,
             model = current_model,
             effort = provider_config and provider_config.reasoning_effort or nil,
+            scope = (meta and meta.first_chapter)
+                and { first = meta.first_chapter, last = meta.last_chapter } or nil,
         })
         
         local cache_msg = cache_saved and self.loc:t("cache_saved") or self.loc:t("cache_save_failed")

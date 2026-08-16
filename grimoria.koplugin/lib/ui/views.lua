@@ -13,6 +13,37 @@ local Screen = require("device").screen
 
 local GrimoriaPlugin = {}
 
+--[[
+The one place unbounded text becomes a page.
+
+Everything read-only and long used to go out through InfoMessage with a
+timeout -- the summary got 15 seconds, a character card 10, a historical figure
+20 -- and three things are wrong with that, the first of them fatal. The widget
+dismisses ITSELF while the reader is still reading, and there is no way to get
+the text back except walking the menu again. It also cannot paginate, so
+anything past one screenful is silently cut off with no scrollbar to admit it.
+And its MovableContainer swallows taps that land on the box, so the obvious
+gesture does nothing (the same property that made the in-flight fetch message
+read as a frozen screen -- see lib/fetch.lua).
+
+TextViewer is what KOReader itself uses for exactly this, and what showAbout
+already used: full screen, tap or swipe to turn the page, a title bar with a
+close button, no timeout. Short status messages -- "no data yet", "cache
+cleared" -- stay on InfoMessage, which is the thing it is actually good at.
+
+`justified = false` on purpose: these texts are full of short bracketed lines
+("[12] ...") and headings, and justification stretches those into gappy
+nonsense at e-ink column widths.
+]]
+function GrimoriaPlugin:showLongText(title, text)
+    local TextViewer = require("ui/widget/textviewer")
+    UIManager:show(TextViewer:new{
+        title = title,
+        text = text,
+        justified = false,
+    })
+end
+
 function GrimoriaPlugin:showCharacters()
     self:applyChapterFilter()  -- refresh for the current chapter
     if not self.characters or #self.characters == 0 then
@@ -68,7 +99,14 @@ function GrimoriaPlugin:showCharacters()
                     text = text,
                     callback = function()
                         self:showCharacterDetails(char)
-                    end
+                    end,
+                    -- Hold for the chapter bar chart. The same gesture the
+                    -- version picker uses for its per-item actions, and the
+                    -- subtitle below says so -- a hold gesture nobody is told
+                    -- about is a feature nobody has.
+                    hold_callback = function()
+                        self:showChapterAppearances(char)
+                    end,
                 })
             else
                 logger.warn("GrimoriaPlugin: Skipping character with invalid text at index", i)
@@ -90,6 +128,7 @@ function GrimoriaPlugin:showCharacters()
     
     local character_menu = Menu:new{
         title = (self.loc:t("menu_characters") or "Characters") .. " (" .. #self.characters .. ")",
+        subtitle = self.loc:t("characters_hint"),
         item_table = items,
         is_borderless = true,
         is_popout = false,
@@ -114,7 +153,14 @@ function GrimoriaPlugin:showCharacterDetails(character)
         elseif type(value) == "number" then
             return tostring(value)
         elseif type(value) == "table" then
-            return json.encode(value)
+            -- A table here means the spoiler filter handed over a chapter-
+            -- tagged list unresolved, which is a bug in lib/spoilers.lua rather
+            -- than something to render. This used to call json.encode, and
+            -- `json` is not required in this file and is not a KOReader global
+            -- -- so the "safe" branch of a function whose whole job is safety
+            -- would have taken the card down with an attempt-to-index-nil.
+            logger.warn("GrimoriaPlugin: unresolved table reached a view")
+            return default or self.loc:t("not_specified")
         elseif type(value) == "function" then
             return self.loc:t("not_specified")
         else
@@ -137,16 +183,21 @@ function GrimoriaPlugin:showCharacterDetails(character)
 %s %s
 %s %s
 %s %s
-]], self.loc:t("character_name"), name, 
+]], self.loc:t("character_name"), name,
     self.loc:t("description"), description,
     self.loc:t("role"), role,
     self.loc:t("gender"), gender,
     self.loc:t("occupation"), occupation)
-    
-    UIManager:show(InfoMessage:new{
-        text = text,
-        width = Screen:getWidth() * 0.9,
-    })
+
+    -- The names the reader has met this identity under, and only those:
+    -- lib/spoilers.lua has already dropped any alias first used in a chapter
+    -- they have not reached.
+    if character.aliases and #character.aliases > 0 then
+        text = text .. "\n" .. self.loc:t("also_known_as") .. " "
+            .. table.concat(character.aliases, ", ") .. "\n"
+    end
+
+    self:showLongText(name, text)
 end
 
 function GrimoriaPlugin:showLocations()
@@ -180,10 +231,7 @@ function GrimoriaPlugin:showLocations()
                 if loc.importance then
                     detail_text = detail_text .. "🎯 " .. self.loc:t("importance") .. "\n" .. loc.importance
                 end
-                UIManager:show(InfoMessage:new{
-                    text = detail_text,
-                    timeout = 10,
-                })
+                self:showLongText(loc.name or self.loc:t("menu_locations"), detail_text)
             end,
         })
     end
@@ -210,20 +258,16 @@ function GrimoriaPlugin:showAuthorInfo()
         return
     end
     
-    local text = "✍️ " .. (self.author_info.name or self.loc:t("menu_author_info")) .. "\n\n"
-    text = text .. self.author_info.description .. "\n\n"
-    
+    local text = self.author_info.description .. "\n\n"
+
     if self.author_info.birthDate and #self.author_info.birthDate > 0 then
         text = text .. "📅: " .. self.author_info.birthDate .. "\n"
     end
     if self.author_info.deathDate and #self.author_info.deathDate > 0 then
         text = text .. "💀: " .. self.author_info.deathDate .. "\n"
     end
-    
-    UIManager:show(InfoMessage:new{
-        text = text,
-        timeout = 15,
-    })
+
+    self:showLongText("✍️ " .. (self.author_info.name or self.loc:t("menu_author_info")), text)
 end
 
 function GrimoriaPlugin:findCharacterByName(word)
@@ -255,8 +299,8 @@ function GrimoriaPlugin:findCharacterByName(word)
 end
 
 function GrimoriaPlugin:showCharacterInfo(char)
-    local text = "👤 " .. (char.name or "Unknown") .. "\n\n"
-    
+    local text = ""
+
     if char.description then
         text = text .. char.description .. "\n\n"
     end
@@ -278,11 +322,13 @@ function GrimoriaPlugin:showCharacterInfo(char)
     if char.occupation then
         text = text .. "💼 " .. self.loc:t("occupation") .. ": " .. char.occupation .. "\n"
     end
-    
-    UIManager:show(InfoMessage:new{
-        text = text,
-        timeout = 10,
-    })
+
+    if char.aliases and #char.aliases > 0 then
+        text = text .. "🏷️ " .. self.loc:t("also_known_as") .. " "
+            .. table.concat(char.aliases, ", ") .. "\n"
+    end
+
+    self:showLongText("👤 " .. (char.name or self.loc:t("unnamed_character")), text)
 end
 
 function GrimoriaPlugin:showSummary()
@@ -295,10 +341,19 @@ function GrimoriaPlugin:showSummary()
         return
     end
     
-    UIManager:show(InfoMessage:new{
-        text = "📖 " .. self.loc:t("summary_title") .. "\n\n" .. self.summary .. "\n\n(Spoiler-free)", 
-        timeout = 15,
-    })
+    --[[
+    The scope line goes in the body rather than the title bar, and the "(Spoiler-
+    free)" footer it replaces is gone.
+
+    That footer was an untranslated English string appended to a Vietnamese
+    summary, and it made a promise without saying how far it reached.
+    describeScope names the actual boundary ("showing up to chapter 12"), which
+    is both the honest version of the same claim and the thing a reader wants
+    when they open this after a week away. It sits at the top because on a
+    paginated view a footer is on the last page, where nobody looks first.
+    ]]
+    self:showLongText("📖 " .. self.loc:t("summary_title"),
+                      self:describeScope() .. "\n\n" .. self.summary)
 end
 
 function GrimoriaPlugin:showThemes()
@@ -311,17 +366,17 @@ function GrimoriaPlugin:showThemes()
         return
     end
     
-    local text = "🎨 " .. self.loc:t("themes_title") .. "\n\n"
+    local text = ""
     for i, theme in ipairs(self.themes) do
         -- Chapter-tagged tables now; plain strings only in pre-filter caches.
         local body = type(theme) == "table" and (theme.theme or "") or tostring(theme)
-        text = text .. i .. ". " .. body .. "\n"
+        -- A blank line between them: themes are whole paragraphs once a model
+        -- takes the "grounded in specific evidence" instruction seriously, and
+        -- run together they read as one long paragraph with stray digits in it.
+        text = text .. i .. ". " .. body .. "\n\n"
     end
-    
-    UIManager:show(InfoMessage:new{
-        text = text,
-        timeout = 10,
-    })
+
+    self:showLongText("🎨 " .. self.loc:t("themes_title"), text)
 end
 
 function GrimoriaPlugin:showTimeline()
@@ -353,8 +408,10 @@ function GrimoriaPlugin:showTimeline()
         table.insert(items, {
             text = text,
             callback = function()
-                local detail_text = string.format(self.loc:t("timeline_event"), i) .. "\n\n"
-                
+                -- The event number is the title bar now, so it is not repeated
+                -- as the first line of the body.
+                local detail_text = ""
+
                 if event.chapter then
                     detail_text = detail_text .. self.loc:t("chapter") .. " " .. event.chapter .. "\n\n"
                 end
@@ -373,11 +430,8 @@ function GrimoriaPlugin:showTimeline()
                 if event.importance then
                     detail_text = detail_text .. "\n" .. self.loc:t("importance") .. "\n" .. event.importance
                 end
-                
-                UIManager:show(InfoMessage:new{
-                    text = detail_text,
-                    timeout = 15,
-                })
+
+                self:showLongText(string.format(self.loc:t("timeline_event"), i), detail_text)
             end,
         })
     end
@@ -451,8 +505,8 @@ function GrimoriaPlugin:showHistoricalFigures()
 end
 
 function GrimoriaPlugin:showHistoricalFigureDetails(figure)
-    local text = "📜 " .. (figure.name or "Unknown") .. "\n\n"
-    
+    local text = ""
+
     if figure.birth_year or figure.death_year then
         text = text .. "📅 "
         if figure.birth_year then
@@ -482,14 +536,17 @@ function GrimoriaPlugin:showHistoricalFigureDetails(figure)
     if figure.context_in_book then
         text = text .. "💡 " .. self.loc:t("hist_context") .. ":\n" .. figure.context_in_book
     end
-    
-    UIManager:show(InfoMessage:new{
-        text = text,
-        timeout = 20,
-    })
+
+    self:showLongText("📜 " .. (figure.name or self.loc:t("unnamed_character")), text)
 end
 
 function GrimoriaPlugin:showChapterCharacters()
+    -- This was the one view that did not refresh first, so it matched the
+    -- chapter's text against whatever set of characters the last view left
+    -- behind. Harmless when that set was smaller than the current one and a
+    -- leak when it was larger -- after a trip through the whole-book toggle it
+    -- would happily name a character out of a chapter the reader is in.
+    self:applyChapterFilter()
     if not self.characters or #self.characters == 0 then
         UIManager:show(InfoMessage:new{
             text = self.loc:t("no_char_data_fetch"), 

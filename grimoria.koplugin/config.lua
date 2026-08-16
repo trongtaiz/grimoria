@@ -60,9 +60,4 @@ return {
     -- custom_api_key = "sk-...",           -- prefer settings/grimoria/custom_api_key.txt
     -- default_provider = "custom",
 
-    settings = {
-        auto_fetch_on_open  = false,
-        cache_duration_days = -1,
-        max_characters      = 20,
-    }
 }

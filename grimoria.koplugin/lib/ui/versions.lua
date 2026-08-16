@@ -63,6 +63,15 @@ function GrimoriaPlugin:autoLoadCache()
     end
 end
 
+--[[
+Re-read whatever analysis is now active and refresh the views.
+
+Deliberately not autoLoadCache: that one announces itself with a counts popup
+and flips grimoria_mode on, which is right when a book opens and wrong when the
+reader is already standing in the version picker. It also does nothing when no
+cache is found, which would leave the deleted analysis still on screen after
+removing the last version.
+]]
 function GrimoriaPlugin:reloadActiveVersion()
     if not self.ui or not self.ui.document then return false end
     local data = self.archive:loadCache(self.ui.document.file)
@@ -88,6 +97,16 @@ function GrimoriaPlugin:reloadActiveVersion()
     return true
 end
 
+--[[
+One line per stored analysis, so two runs are distinguishable at a glance:
+
+    > gpt-5.5-high - 14 Aug 00:52 - 56 ch, 21 chars, 2 merges
+      gemini-3.6-flash - 13 Aug 22:51 - 56 ch, 15 chars, 1 merge
+
+Caches written before versioning carry no model, and guessing from the current
+settings would be confidently wrong for any analysis made with another model,
+so they read "unknown model" until renamed.
+]]
 function GrimoriaPlugin:describeVersion(v, is_active)
     local name = v.label or v.model
     if not name or #name == 0 then name = self.loc:t("unknown_model_version") end
@@ -109,6 +128,7 @@ function GrimoriaPlugin:describeVersion(v, is_active)
     return (is_active and "✓ " or "   ") .. name .. " - " .. when .. " - " .. stats
 end
 
+-- Switch between stored analyses. Entirely local: no API call, works offline.
 function GrimoriaPlugin:showVersionPicker()
     if not self.archive then
         local Archive = require("lib/archive")
@@ -165,6 +185,7 @@ function GrimoriaPlugin:showVersionPicker()
     UIManager:show(menu)
 end
 
+-- Rename / delete, reached by holding an entry.
 function GrimoriaPlugin:showVersionActions(book_path, v)
     local ButtonDialog = require("ui/widget/buttondialog")
     local dlg

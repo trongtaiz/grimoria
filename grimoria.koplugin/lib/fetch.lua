@@ -15,6 +15,7 @@ local Screen = require("device").screen
 
 local GrimoriaPlugin = {}
 
+-- Get current reading progress (works for EPUB, PDF, MOBI, etc.)
 function GrimoriaPlugin:getReadingProgress()
     -- Default values
     local current_page = 0
@@ -149,12 +150,20 @@ function GrimoriaPlugin:fetchFromAI()
     self:askSpoilerPreference()
 end
 
+-- Read the extraction cap from settings/grimoria/max_text_chars.txt, same
+-- convention as gemini_model.txt and output_language.txt.
 function GrimoriaPlugin:getMaxCharsSetting()
     local BookText = require("lib/booktext")
     local Paths = require("lib/paths")
     return tonumber(Paths:readSetting("max_text_chars.txt")) or BookText.MAX_CHARS_DEFAULT
 end
 
+--[[
+There is no longer a spoiler-free / full-book choice to make: the whole book
+is analysed once, and how much of it gets shown is decided locally from the
+reading position. So this is now a single confirmation, whose job is to tell
+the user what the request will cost before they spend it.
+]]
 function GrimoriaPlugin:askSpoilerPreference()
     local ConfirmBox = require("ui/widget/confirmbox")
     local BookText = require("lib/booktext")
@@ -192,6 +201,26 @@ function GrimoriaPlugin:askSpoilerPreference()
     })
 end
 
+--[[
+Keep the device awake for as long as a fetch is running.
+
+A whole-book analysis runs for minutes -- the worst case seen in practice is
+~19 minutes. Left alone the device reaches its sleep timeout partway through,
+and with "disable Wi-Fi when sleeping" turned on the socket dies with it: the
+request is lost after the tokens have already been spent, and the reader comes
+back to a dead connection they can't get out of.
+
+Mirrors what KOReader's own KeepAlive plugin does, per platform:
+
+  Kindle    lipc preventScreenSaver, plus PluginShare.keepalive so AutoSuspend
+            stops resetting the system t1 timeout -- resetting it while the
+            screensaver is disabled is what AutoSuspend itself warns crashes.
+  others    PluginShare.pause_auto_suspend, which AutoSuspend checks before
+            calling UIManager:suspend() on every platform.
+
+Counted rather than boolean-flagged is unnecessary here: only one fetch can be
+in flight, since the UI that starts it is modal.
+]]
 function GrimoriaPlugin:holdDeviceAwake()
     if self.awake_held then return end
     local Device = require("device")
@@ -290,6 +319,29 @@ function GrimoriaPlugin:continueWithFetch(reading_percent)
     end)
 end
 
+--[[
+The "analysing…" widget shown while the request is in flight, and the
+confirmation that guards cancelling it.
+
+Neither widget Trapper accepts is right on its own:
+
+  InfoMessage puts its text inside a MovableContainer, which swallows taps on
+  the message itself. Its tap range is the whole screen, so tapping BESIDE the
+  box works while tapping ON it appears to do nothing -- which reads as a
+  frozen screen, the exact impression this whole change exists to remove.
+
+  TrapWidget does catch taps anywhere, including on its own message, but
+  dismissableRunInSubprocess kills the sub-process the instant one lands. One
+  stray tap would then throw away a twenty-minute job with no warning.
+
+So: a TrapWidget with the dismissal intercepted to ask first. Trapper
+overwrites dismiss_callback with its own resume function, which is fine --
+what this subclass changes is WHEN that callback fires, not what it does.
+
+The ConfirmBox has ok and cancel reversed, the same way Trapper:info does it:
+tapping outside a ConfirmBox triggers cancel, so cancel must be the harmless
+choice. Throwing the analysis away takes a deliberate tap on the button.
+]]
 function GrimoriaPlugin:makeCancelConfirmWidget(text, confirm_text, abort_text, continue_text)
     local TrapWidget = require("ui/widget/trapwidget")
     local ConfirmBox = require("ui/widget/confirmbox")
@@ -333,6 +385,8 @@ function GrimoriaPlugin:makeCancelConfirmWidget(text, confirm_text, abort_text, 
     return CancelConfirm:new{ text = text }
 end
 
+-- The fetch itself. Split out of continueWithFetch so the sleep-hold above can
+-- wrap it in a pcall; runs inside Trapper:wrap, so it may yield.
 function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
                              provider_config, provider_name, current_model)
     local Trapper = require("ui/trapper")

@@ -54,6 +54,7 @@ mixin(GrimoriaPlugin, require("lib/ui/settings"), "lib/ui/settings")
 mixin(GrimoriaPlugin, require("lib/ui/versions"), "lib/ui/versions")
 mixin(GrimoriaPlugin, require("lib/ui/notes"), "lib/ui/notes")
 mixin(GrimoriaPlugin, require("lib/ui/views"), "lib/ui/views")
+mixin(GrimoriaPlugin, require("lib/updater"), "lib/updater")
 
 function GrimoriaPlugin:init()
     self.ui.menu:registerToMainMenu(self)
@@ -64,6 +65,11 @@ function GrimoriaPlugin:init()
     self.loc:init() -- Load saved language preference
     
     self:onDispatcherRegisterActions()
+
+    -- Reaching this line means the plugin loaded and every module resolved,
+    -- which is the only "the update worked" signal available on a device with
+    -- no console. Clears the marker the updater left; keeps the backup.
+    self:updaterHealthCheck()
 
     logger.info("GrimoriaPlugin: Initialized with language:", self.loc:getLanguage())
 end

@@ -73,6 +73,12 @@ entries must read as unrelated:
 5. The same stop-reading rule applies to chapter summaries and events:
    describe each scene as the text presents it at that point, preserving any
    anonymity, disguise, or misdirection the author maintains there.
+6. NO FORWARD REFERENCE AND NO FORESHADOWING. Write the summary and events of
+   chapter n as if chapter n+1 did not exist. Nothing may hint at what is
+   coming, not even without naming it: no "which will prove important later",
+   no "little does he know", no "the first of several". A reader sees each
+   chapter's summary the moment they finish that chapter, so a hint there
+   tells them something the author chose not to.
 ]],
 
 section_characters = [[
@@ -84,12 +90,23 @@ DISCIPLINE).
 For each identity:
   - name: the name the TEXT uses for this identity (an alias, or a
     descriptive name like "the mystery man" for an anonymous figure)
-  - role: Protagonist / Supporting / Antagonist as this identity APPEARS
-  - gender: only if the text evidences it (pronouns, direct statement);
-    otherwise "Unspecified"
-  - occupation: only if stated or plainly implied; otherwise ""
+  - role, gender, occupation: these are TIME-STAMPED LISTS, not single
+    values, because they change over a book. Each entry is
+    { "value": "...", "first_chapter": n } where n is the chapter by which
+    the TEXT has established that value. A character who is a student in
+    chapter 1 and a prison warden from chapter 47 has TWO occupation
+    entries; the reader is shown whichever is current where they are.
+    One entry is normal for something that never changes. Use [] rather
+    than guessing, and never give a value a chapter earlier than the text
+    supports - that is the whole point of the field.
+      role: Protagonist / Supporting / Antagonist as this identity APPEARS
+      gender: only if the text evidences it (pronouns, direct statement)
+      occupation: only if stated or plainly implied
   - intro: ONE sentence identifying this identity, written from the
-    knowledge of a reader who has only just met them
+    knowledge of a reader who has only just met them. It is shown from
+    first_chapter onward and never changes, so it must contain nothing the
+    text has not established BY THAT CHAPTER - and in particular no name
+    the reader has not met yet.
   - first_chapter: the chapter where this identity first appears
   - by_chapter: an entry ONLY for chapters where this identity actually
     appears or is significantly discussed, 1-2 sentences on what they do IN
@@ -115,7 +132,13 @@ Empty list if the book has no hidden-identity twist.
 
 section_locations = [[
 LOCATIONS: Only places named or described in the text. Give the name as
-spelled, a description drawn from the text, and first_chapter.
+spelled, and first_chapter - the chapter the place is first named.
+
+description and importance are TIME-STAMPED LISTS, the same shape as a
+character's occupation: { "value": "...", "first_chapter": n }. A room the
+reader sees in chapter 3 and learns something else about in chapter 40 gets
+two entries, so the later one stays hidden until then. Describe a place
+using only what the text has shown about it by the chapter you tag.
 ]],
 
 section_themes = [[
@@ -141,6 +164,12 @@ HISTORICAL_FIGURES: REAL historical people, and only if the text explicitly
 names or unmistakably refers to them. If the text mentions none, return an
 empty array. Do NOT add a ruler, era figure, or any other stand-in to avoid an
 empty list - inventing one is fabrication, not analysis.
+
+biography is general knowledge and needs no chapter. Everything about what THE
+BOOK does with the person is book content and is filtered like everything else:
+give first_chapter (where the text first invokes them), and make role,
+importance_in_book and context_in_book time-stamped lists of
+{ "value": "...", "first_chapter": n }.
 ]],
 
 section_author_bio = [[
@@ -174,9 +203,9 @@ gives you nothing:
   "characters": [
     {
       "name": "the name THE TEXT uses for this identity",
-      "role": "Protagonist / Supporting / Antagonist (as it appears)",
-      "gender": "Male / Female / Unspecified",
-      "occupation": "",
+      "role": [ { "value": "Protagonist / Supporting / Antagonist (as it appears)", "first_chapter": 1 } ],
+      "gender": [ { "value": "Male / Female / Unspecified", "first_chapter": 1 } ],
+      "occupation": [ { "value": "", "first_chapter": 1 } ],
       "intro": "one sentence, knowing only what a new reader knows",
       "first_chapter": 1,
       "by_chapter": [ { "chapter": 1, "development": "1-2 sentences" } ]
@@ -187,14 +216,18 @@ gives you nothing:
       "merged_name": "A (B)", "true_role": "", "revelation": "1-2 sentences" }
   ],
   "locations": [
-    { "name": "", "description": "", "first_chapter": 1 }
+    { "name": "", "first_chapter": 1,
+      "description": [ { "value": "", "first_chapter": 1 } ],
+      "importance": [ { "value": "", "first_chapter": 1 } ] }
   ],
   "themes": [
     { "theme": "spoiler-free statement of the theme", "first_chapter": 1 }
   ],
   "historical_figures": [
-    { "name": "", "role": "", "biography": "",
-      "importance_in_book": "", "context_in_book": "" }
+    { "name": "", "biography": "", "first_chapter": 1,
+      "role": [ { "value": "", "first_chapter": 1 } ],
+      "importance_in_book": [ { "value": "", "first_chapter": 1 } ],
+      "context_in_book": [ { "value": "", "first_chapter": 1 } ] }
   ]
 }]],
 

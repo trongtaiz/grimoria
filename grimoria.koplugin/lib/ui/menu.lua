@@ -287,6 +287,29 @@ function GrimoriaPlugin:addToMainMenu(menu_items)
             },
             { separator = true },
             {
+                text = self.loc:t("menu_check_updates"),
+                keep_menu_open = true,
+                callback = function()
+                    self:checkForUpdates()
+                end,
+            },
+            {
+                -- Only offered when there is something to go back to. Shown
+                -- greyed rather than hidden would be worse: an entry that is
+                -- always there and usually refuses reads as broken.
+                text = self.loc:t("menu_revert_update"),
+                keep_menu_open = true,
+                enabled_func = function()
+                    local lfs = require("libs/libkoreader-lfs")
+                    local dir = self:updaterPluginDir()
+                    return dir ~= nil
+                        and lfs.attributes(dir .. "/.update-backup", "mode") == "directory"
+                end,
+                callback = function()
+                    self:revertLastUpdate()
+                end,
+            },
+            {
                 text = self.loc:t("menu_about"),
                 keep_menu_open = true,
                 callback = function()

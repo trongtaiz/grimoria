@@ -46,6 +46,15 @@ CLAUDE.md
 # ---------------------------------------------------------------------------
 # Build output, editor and OS junk
 # ---------------------------------------------------------------------------
+# The self-updater's workspace, created inside the plugin folder at update
+# time: staged downloads, and the previous version kept for "Revert last
+# update". Both are per-install state, and .update-backup/ in particular is a
+# whole second copy of the plugin -- committing either would publish the old
+# version alongside the new one.
+grimoria.koplugin/.update-staging/
+grimoria.koplugin/.update-backup/
+grimoria.koplugin/.update-state.json
+
 # The plugin folder is the deliverable; any packaged copy of it is rebuildable.
 *.zip
 *.zipp

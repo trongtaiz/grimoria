@@ -6,6 +6,45 @@ with a chapter; this decides which of them the reader has earned. One
 textual identity is one character entry, and two identities that turn out
 to be the same person stay separate until the chapter where the book
 itself connects them.
+
+THE GOVERNING RULE
+
+  Every piece of text carries a chapter number and is written as if its
+  author had read only up to that chapter. Anything untagged is treated as
+  end-of-book and stays hidden.
+
+The second sentence is the one that was missing, and it is why this file was
+rewritten. The filter used to copy a character table wholesale --
+
+    for k, v in pairs(c) do copy[k] = v end
+
+-- and rebuild only `description`. Everything else came straight through:
+`role`, `occupation` and `gender` are written by a model that read the whole
+book, so a reader four chapters in was shown the job a character only takes in
+chapter forty-seven. That was reported from real use, and reading the rest of
+the path found seven more of the same shape -- untagged data defaulting to
+chapter 1, a summary falling back to the whole book, a merge importing a field
+from a character not yet met, legacy caches bypassing every rule.
+
+The fix is structural rather than another prompt instruction, because prompt
+instructions have already failed twice here: five of six models named the
+murderer inside a theme, and one labelled a character `Antagonist` from the
+chapter he first appears in. So:
+
+  * VIEWS ARE BUILT FROM A WHITELIST, field by field. A field nobody taught
+    this file about cannot reach the UI, whatever a model puts in the JSON.
+    Adding a field to the schema means adding it here, deliberately.
+  * EVERY DEFAULT FAILS CLOSED. Missing chapter information means end-of-book,
+    never chapter 1. Hiding something harmless is the right error for a
+    spoiler filter; showing the ending is not.
+  * VALUES THAT CHANGE OVER A BOOK ARE CHAPTER-TAGGED LISTS, and resolved
+    here to the latest value the reader has earned.
+
+Resolution happens in this file on purpose. lib/ui/views.lua consumes these
+fields as plain strings -- it concatenates `char.role` directly -- so handing
+it a list would print raw JSON on one card and crash another. Everything that
+leaves here is a string the views can use unchanged, which is also what keeps
+their "never read self.book_data" property doing the real work.
 ]]
 
 local UIManager = require("ui/uimanager")
@@ -17,6 +56,82 @@ local Screen = require("device").screen
 
 local GrimoriaPlugin = {}
 
+-- --------------------------------------------------------- tagged values ----
+
+-- The book's last chapter, which is what "end-of-book" resolves to.
+local function lastChapterOf(data)
+    local chs = data.chapters
+    if chs and #chs > 0 then
+        return tonumber(chs[#chs].index) or #chs
+    end
+    return 1
+end
+
+--[[
+When does this item become visible?
+
+`v` is an item's first_chapter as the model wrote it. Anything that is not a
+usable chapter number -- absent, zero, a string, a negative -- resolves to the
+last chapter, so the item stays hidden until the reader has finished the book.
+Defaulting to 1 here is what made a model that simply forgot the field able to
+publish its whole answer on page one.
+]]
+local function visibleFrom(v, last)
+    local n = tonumber(v)
+    if n and n >= 1 then return math.floor(n) end
+    return last
+end
+
+--[[
+Resolve a chapter-tagged value to the string the reader has earned.
+
+Two shapes arrive here:
+
+  a list   { { value = "Student", first_chapter = 1 },
+             { value = "...",     first_chapter = 47 } }
+           -- the latest entry at or before the limit wins, so a job, title or
+           allegiance taken later in the book simply does not exist yet.
+
+  a string "Student"
+           -- what every analysis written before this change contains, with no
+           chapter information at all. Treated as end-of-book: visible in
+           whole-book view, or once the reader reaches the last chapter.
+
+`limit == nil` means the whole book, so the last value in the list wins.
+]]
+local function resolveTagged(v, limit, last)
+    if v == nil then return "" end
+
+    if type(v) == "string" then
+        if limit == nil or limit >= last then return v end
+        return ""
+    end
+    if type(v) ~= "table" then return "" end
+
+    local best_at, best_value = nil, nil
+    for _, item in ipairs(v) do
+        if type(item) == "table" and type(item.value) == "string" and #item.value > 0 then
+            local at = visibleFrom(item.first_chapter, last)
+            if limit == nil or at <= limit then
+                -- >= rather than > so that list order breaks a tie, which is
+                -- the order the model wrote them in.
+                if best_at == nil or at >= best_at then
+                    best_at, best_value = at, item.value
+                end
+            end
+        elseif type(item) == "string" and #item > 0 then
+            -- A model that emitted a bare list of strings. No chapter, so the
+            -- same rule as an untagged string applies.
+            if limit == nil or limit >= last then
+                best_at, best_value = last, item
+            end
+        end
+    end
+    return best_value or ""
+end
+
+-- ---------------------------------------------------------------- fusing ----
+
 --[[
 Fuse identities that the text has already connected.
 
@@ -27,17 +142,97 @@ itself makes the connection; from that chapter on, the member entries become
 one fused card. Before it, they stay unrelated -- that separation IS the
 spoiler protection.
 
+The fusion is gated on the merge chapter, but what it IMPORTS has to be gated
+too, and used not to be: the fused card adopted the first non-empty
+`occupation` from any member, including a member the reader has not met. The
+merge being visible says these identities are one person; it does not say the
+reader has met every one of them.
+
 limit == nil means "the whole book": every merge applies.
 ]]
-local function fuseCharacters(data, limit)
+local function fuseCharacters(data, limit, last)
     local chars = data.characters or {}
-    local applies = {}   -- identity name -> merge entry
+
+    --[[
+    Merges chain, and one identity can appear in several of them.
+
+    A real analysis of one novel has "Morisu Kyoichi" merging with "Van" at
+    chapter 47 and with an anonymous figure at chapter 56. Keyed one-merge-per-
+    name, the second entry overwrote the first and the reader ended up with two
+    cards for the same person -- "Morisu Kyoichi (Van)" holding only Van, and
+    "Morisu Kyoichi (hắn)" holding the other two.
+
+    So the applicable merges are unioned into GROUPS: every name reachable from
+    every name, through whichever merges the reader has reached.
+
+    The group takes its display name, role and revelation from the EARLIEST
+    applicable merge. That one is the reveal -- the moment the book names the
+    person behind the mask -- while a later merge typically folds in an
+    anonymous figure ("the man in the raincoat") whose name identifies nobody.
+    Taking the latest would title the card after exactly that placeholder.
+    ]]
+    local group_of = {}   -- identity name -> group table
+    local groups = {}
     for _, m in ipairs(data.identity_merges or {}) do
-        if (not limit) or m.chapter <= limit then
-            for _, n in ipairs(m.names) do applies[n] = m end
+        local at = visibleFrom(m.chapter, last)
+        if (not limit) or at <= limit then
+            -- Collect any groups these names already belong to, and fold them
+            -- together with this merge into one.
+            local merged = { names = {}, chapter = at, merged_name = m.merged_name,
+                             true_role = m.true_role, revelation = m.revelation }
+            local seen = {}
+            local function take(name)
+                if type(name) ~= "string" or seen[name] then return end
+                seen[name] = true
+                merged.names[#merged.names + 1] = name
+            end
+            for _, n in ipairs(m.names or {}) do
+                local g = group_of[n]
+                if g then
+                    for _, gn in ipairs(g.names) do take(gn) end
+                    if g.chapter <= merged.chapter then
+                        merged.chapter = g.chapter
+                        merged.merged_name = g.merged_name
+                        merged.true_role = g.true_role
+                        merged.revelation = g.revelation
+                    end
+                end
+                take(n)
+            end
+            groups[#groups + 1] = merged
+            for _, n in ipairs(merged.names) do group_of[n] = merged end
         end
     end
+
+    local applies = group_of
     if not next(applies) then return chars end
+
+    -- Has the reader met this identity yet? Only such members may contribute.
+    local function met(c)
+        return limit == nil or visibleFrom(c.first_chapter, last) <= limit
+    end
+
+    --[[
+    Collect one member's chapter-tagged values onto the fused card's.
+
+    Union rather than first-wins, which is the change the tagged shape forces
+    and also the correct reading: a fused card is ONE PERSON, so their
+    occupation over the book is everything each identity showed of it, in
+    chapter order. First-wins would pin the card to whichever identity happened
+    to be listed first -- so a disguise described as "occupation: unknown" in
+    chapter 1 would still say "unknown" three hundred pages after the reader
+    learned the man's actual job under his real name.
+
+    resolveTagged then picks the latest entry the reader has earned, so
+    collecting a value here is never the same as showing it.
+    ]]
+    local function collect(dst, v)
+        if type(v) == "table" then
+            for _, item in ipairs(v) do dst[#dst + 1] = item end
+        elseif type(v) == "string" and #v > 0 then
+            dst[#dst + 1] = v      -- resolveTagged reads a bare string as end-of-book
+        end
+    end
 
     local emitted, out = {}, {}
     for _, c in ipairs(chars) do
@@ -50,21 +245,28 @@ local function fuseCharacters(data, limit)
             -- encountered anchors the card's position in the list.
             local fused = {
                 name = m.merged_name,
-                role = (#m.true_role > 0) and m.true_role or c.role,
-                gender = c.gender,
-                occupation = c.occupation,
-                intro = c.intro,
-                first_chapter = c.first_chapter or 1,
+                role = {}, gender = {}, occupation = {}, aliases = {},
+                intro = nil,
+                first_chapter = visibleFrom(c.first_chapter, last),
                 by_chapter = {},
                 revelation = m.revelation,
-                merge_chapter = m.chapter,
+                merge_chapter = visibleFrom(m.chapter, last),
             }
             for _, cc in ipairs(chars) do
                 if applies[cc.name] == m then
-                    fused.first_chapter = math.min(fused.first_chapter, cc.first_chapter or 1)
-                    if (not fused.occupation or #fused.occupation == 0)
-                        and cc.occupation and #cc.occupation > 0 then
-                        fused.occupation = cc.occupation
+                    fused.first_chapter =
+                        math.min(fused.first_chapter, visibleFrom(cc.first_chapter, last))
+                    -- Fields are imported only from identities already met.
+                    -- The merge being visible says these identities are one
+                    -- person; it does not say the reader has met all of them.
+                    if met(cc) then
+                        collect(fused.occupation, cc.occupation)
+                        collect(fused.gender, cc.gender)
+                        collect(fused.role, cc.role)
+                        if fused.intro == nil then fused.intro = cc.intro end
+                        for _, a in ipairs(cc.aliases or {}) do
+                            fused.aliases[#fused.aliases + 1] = a
+                        end
                     end
                     for _, bc in ipairs(cc.by_chapter or {}) do
                         fused.by_chapter[#fused.by_chapter + 1] = {
@@ -75,118 +277,315 @@ local function fuseCharacters(data, limit)
                     end
                 end
             end
-            table.sort(fused.by_chapter, function(a, b) return a.chapter < b.chapter end)
+
+            -- true_role is revealed BY the merge, so it is earned exactly when
+            -- the merge applies -- which is the only way we reached this line.
+            -- It describes the fused person, so it supersedes the roles the
+            -- separate identities appeared to have.
+            if type(m.true_role) == "string" and #m.true_role > 0 then
+                fused.role = { { value = m.true_role,
+                                 first_chapter = fused.merge_chapter } }
+            end
+            table.sort(fused.by_chapter, function(a, b)
+                return visibleFrom(a.chapter, last) < visibleFrom(b.chapter, last)
+            end)
             out[#out + 1] = fused
         end
     end
     return out
 end
 
+-- ------------------------------------------------------ whitelist builds ----
+
+--[[
+Build the character card the UI renders.
+
+Every field is named here explicitly. This is the rule the reported bug broke:
+copying the source table meant that adding a field to the JSON schema silently
+added it to the screen, unfiltered, and nobody had to decide anything.
+
+`description` is assembled from what the reader has read -- the intro, the
+revelation if the merge has landed, and one line per chapter already reached.
+It is never inherited: an analysis that arrives with a `description` written
+for the whole book (every pre-versioning cache has one) must not be able to
+substitute it in when this rebuild produces nothing.
+]]
+local function buildCharacter(c, limit, last)
+    local bits = {}
+    local intro = resolveTagged(c.intro, limit, last)
+    if #intro > 0 then bits[#bits + 1] = intro end
+
+    if c.merge_chapter and type(c.revelation) == "string" and #c.revelation > 0 then
+        bits[#bits + 1] = string.format("[%d] * %s", c.merge_chapter, c.revelation)
+    end
+
+    for _, bc in ipairs(c.by_chapter or {}) do
+        local at = visibleFrom(bc.chapter, last)
+        local dev = type(bc.development) == "string" and bc.development or ""
+        if (limit == nil or at <= limit) and #dev > 0 then
+            if bc.as_name and c.merge_chapter then
+                -- fused card: say which identity this entry belonged to
+                bits[#bits + 1] = string.format("[%d] (%s) %s", at, bc.as_name, dev)
+            else
+                bits[#bits + 1] = string.format("[%d] %s", at, dev)
+            end
+        end
+    end
+
+    local aliases = {}
+    for _, a in ipairs(c.aliases or {}) do
+        if type(a) == "table" and type(a.alias) == "string" and #a.alias > 0 then
+            if limit == nil or visibleFrom(a.first_chapter, last) <= limit then
+                aliases[#aliases + 1] = a.alias
+            end
+        end
+    end
+
+    return {
+        name        = type(c.name) == "string" and c.name or "",
+        role        = resolveTagged(c.role, limit, last),
+        gender      = resolveTagged(c.gender, limit, last),
+        occupation  = resolveTagged(c.occupation, limit, last),
+        intro       = intro,
+        description = table.concat(bits, "\n\n"),
+        aliases     = aliases,
+        first_chapter = visibleFrom(c.first_chapter, last),
+        -- Both of these exist only on a fused card, and a card is only fused
+        -- from its merge chapter on -- so by the time either is non-nil the
+        -- text has already made the connection they describe.
+        merge_chapter = c.merge_chapter,
+        revelation  = c.merge_chapter and c.revelation or nil,
+        by_chapter  = c.by_chapter,
+    }
+end
+
+local function buildLocation(l, limit, last)
+    return {
+        name        = type(l.name) == "string" and l.name or "",
+        description = resolveTagged(l.description, limit, last),
+        -- `importance` carries no chapter of its own, and it is prose about
+        -- what a place turns out to matter for -- which is exactly the kind of
+        -- sentence that gives an ending away. End-of-book unless tagged.
+        importance  = resolveTagged(l.importance, limit, last),
+        first_chapter = visibleFrom(l.first_chapter, last),
+    }
+end
+
+local function buildFigure(h, limit, last)
+    return {
+        name               = type(h.name) == "string" and h.name or "",
+        role               = resolveTagged(h.role, limit, last),
+        biography          = type(h.biography) == "string" and h.biography or "",
+        -- What the book does with a real person is book content, so both of
+        -- these filter; the biography is general knowledge and does not.
+        importance_in_book = resolveTagged(h.importance_in_book, limit, last),
+        context_in_book    = resolveTagged(h.context_in_book, limit, last),
+        first_chapter      = visibleFrom(h.first_chapter, last),
+    }
+end
+
+local function buildEvent(ev, last)
+    return {
+        event         = type(ev.event) == "string" and ev.event or "",
+        importance    = type(ev.importance) == "string" and ev.importance or "",
+        chapter       = ev.chapter,
+        chapter_index = visibleFrom(ev.chapter_index, last),
+    }
+end
+
+-- ---------------------------------------------------------- the filter ----
+
 function GrimoriaPlugin:applyChapterFilter()
     local data = self.book_data
     if not data then return end
 
-    -- Per-chapter data absent (old cache, or the no-text fallback): show it all.
+    local last = lastChapterOf(data)
+
+    --[[
+    How far has the reader got?
+
+    Three cases, and the third is the one that used to leak. An analysis with
+    no chapters at all cannot be filtered against anything, and the explicit
+    whole-book toggle is the reader asking to see everything -- both are
+    limit == nil, deliberately.
+
+    But getCurrentChapterIndex also returns nil when it simply FAILS: an
+    xpointer it cannot resolve, a document mid-close. Treating that as "show
+    the whole book" handed over the complete analysis on a transient error.
+    It now falls back to the last position that did resolve, and to chapter 1
+    if there has never been one.
+    ]]
     local has_chapter_data = data.chapters and #data.chapters > 0
+    local previous = self.filter_chapter
     local limit = nil
     if has_chapter_data and not self.show_whole_book then
         local BookText = require("lib/booktext")
-        limit = BookText:getCurrentChapterIndex(self.ui)
+        local here = BookText:getCurrentChapterIndex(self.ui)
+        if not here then
+            limit = previous or 0
+            logger.warn("Grimoria: current chapter did not resolve; filtering at",
+                        limit, "rather than showing the whole book")
+        else
+            --[[
+            THE CURRENT CHAPTER IS NOT SHOWN, and this is the subtle half of
+            the whole design.
+
+            getCurrentChapterIndex answers "which chapter is the reader in",
+            not "which chapters has the reader finished" -- it is the last
+            chapter whose start is at or before their position, so it says 12
+            from the first line of chapter 12 onward. Filtering at <= 12 then
+            showed chapter 12's summary, its events, and what every character
+            does in it, to somebody two paragraphs into it. The plugin was
+            spoiling the page being read.
+
+            What a reader has actually finished is chapters 1..k-1, so that is
+            the limit. The cost is visible and worth stating: on chapter 1
+            there is nothing to show yet, and a chapter you have just finished
+            stays hidden until you turn into the next one. Both are the filter
+            erring towards silence, which is the direction it is supposed to
+            err in -- and `include_current_chapter.txt` is there for a reader
+            who disagrees.
+            ]]
+            limit = self:spoilerIncludesCurrentChapter() and here or (here - 1)
+        end
     end
     self.filter_chapter = limit
 
-    local fused = fuseCharacters(data, limit)
+    local fused = fuseCharacters(data, limit, last)
 
-    if not limit then
-        self.characters = fused
-        self.locations = data.locations or {}
-        self.timeline = data.timeline or {}
-        self.summary = data.summary
-        self.themes = data.themes or {}
-        self.historical_figures = data.historical_figures or {}
-        return
-    end
-
-    -- Characters: only those introduced by now, and only what they had done by
-    -- now. description is rebuilt from intro + the chapters already read.
     local chars = {}
     for _, c in ipairs(fused) do
-        if (c.first_chapter or 1) <= limit then
-            local bits = {}
-            if c.intro and #c.intro > 0 then bits[#bits + 1] = c.intro end
-            if c.revelation and #c.revelation > 0 then
-                bits[#bits + 1] = string.format("[%d] ⚡ %s", c.merge_chapter, c.revelation)
-            end
-            for _, bc in ipairs(c.by_chapter or {}) do
-                if bc.chapter <= limit and bc.development and #bc.development > 0 then
-                    if bc.as_name and c.merge_chapter then
-                        -- fused card: say which identity this entry belonged to
-                        bits[#bits + 1] = string.format("[%d] (%s) %s",
-                            bc.chapter, bc.as_name, bc.development)
-                    else
-                        bits[#bits + 1] = string.format("[%d] %s", bc.chapter, bc.development)
-                    end
-                end
-            end
-            local copy = {}
-            for k, v in pairs(c) do copy[k] = v end
-            if #bits > 0 then copy.description = table.concat(bits, "\n\n") end
-            chars[#chars + 1] = copy
+        if limit == nil or visibleFrom(c.first_chapter, last) <= limit then
+            chars[#chars + 1] = buildCharacter(c, limit, last)
         end
     end
     self.characters = chars
 
     local locs = {}
     for _, l in ipairs(data.locations or {}) do
-        if (l.first_chapter or 1) <= limit then locs[#locs + 1] = l end
+        if type(l) == "table"
+            and (limit == nil or visibleFrom(l.first_chapter, last) <= limit) then
+            locs[#locs + 1] = buildLocation(l, limit, last)
+        end
     end
     self.locations = locs
 
     local tl = {}
     for _, ev in ipairs(data.timeline or {}) do
-        if (ev.chapter_index or 1) <= limit then tl[#tl + 1] = ev end
+        if type(ev) == "table"
+            and (limit == nil or visibleFrom(ev.chapter_index, last) <= limit) then
+            tl[#tl + 1] = buildEvent(ev, last)
+        end
     end
     self.timeline = tl
 
+    --[[
+    The summary is the chapters already read, and nothing else.
+
+    It used to fall back to data.summary when no chapter up to the current one
+    carried one -- and data.summary is stitched from EVERY chapter, ending
+    included. A book whose first chapters have no summary therefore opened with
+    the whole plot. "No summary yet" is the honest answer and now the only one.
+    ]]
     local parts = {}
-    for _, ch in ipairs(data.chapters) do
-        if ch.index <= limit and ch.summary and #ch.summary > 0 then
+    for _, ch in ipairs(data.chapters or {}) do
+        local at = tonumber(ch.index) or last
+        if (limit == nil or at <= limit) and type(ch.summary) == "string" and #ch.summary > 0 then
             parts[#parts + 1] = ch.summary
         end
     end
-    self.summary = #parts > 0 and table.concat(parts, "\n\n") or data.summary
+    self.summary = table.concat(parts, "\n\n")
 
-    -- Themes used to pass through unfiltered on the assumption that they were
-    -- book-level and harmless. They are not: on a mystery, models routinely
-    -- name the culprit inside a theme, so a reader four chapters in could open
-    -- Themes and have the ending handed to them. They filter like everything
-    -- else now. Legacy caches hold plain strings; lib/llm tags those as
-    -- end-of-book, so they stay hidden until the reader gets there.
+    --[[
+    Themes filter like everything else, and the legacy shape fails closed.
+
+    Measured on one book: five of six models named the murderer inside a theme
+    string, and one spelled out the hidden-identity twist outright, while this
+    view passed them through on the assumption that themes were "book-level and
+    harmless". Caches written before that discovery hold plain strings produced
+    with no spoiler rule on the field at all -- so those are end-of-book. The
+    branch that handled them used to sit OUTSIDE the chapter test and tag them
+    chapter 1, four lines below a comment promising the opposite.
+    ]]
     local th = {}
     for _, t in ipairs(data.themes or {}) do
+        local body, at
         if type(t) == "table" then
-            if (t.first_chapter or 1) <= limit then th[#th + 1] = t end
-        else
-            th[#th + 1] = { theme = tostring(t), first_chapter = 1 }
+            body = type(t.theme) == "string" and t.theme or ""
+            at = visibleFrom(t.first_chapter, last)
+        elseif type(t) == "string" then
+            body, at = t, last
+        end
+        if body and #body > 0 and (limit == nil or at <= limit) then
+            th[#th + 1] = { theme = body, first_chapter = at }
         end
     end
     self.themes = th
 
-    -- Historical figures are real people referenced by the text (authors,
-    -- era figures); they carry far less plot than a theme does, and have no
-    -- chapter information to filter on, so they still pass through.
-    self.historical_figures = data.historical_figures or {}
+    --[[
+    Historical figures used to pass through unfiltered, on the reasoning that
+    they carry less plot than a theme and had no chapter field to filter on.
+    The second half was true and is the actual reason; it is not a reason to
+    show them. `context_in_book` is a sentence about what the book does with a
+    real person, which on a historical novel is plot. They filter now, and an
+    untagged one is end-of-book like everything else.
+    ]]
+    local figs = {}
+    for _, h in ipairs(data.historical_figures or {}) do
+        if type(h) == "table"
+            and (limit == nil or visibleFrom(h.first_chapter, last) <= limit) then
+            figs[#figs + 1] = buildFigure(h, limit, last)
+        end
+    end
+    self.historical_figures = figs
 end
 
--- Toggle between "up to where I am" and the complete analysis.
+--[[
+Should the chapter the reader is currently inside count as read?
+
+No, by default -- see applyChapterFilter. The escape hatch exists because the
+safe answer has a visible cost (nothing at all on chapter 1) and a reader who
+finds that irritating should not have to edit Lua to change it. Same
+convention as every other setting: one plain-text file in settings/grimoria/.
+
+Cached on the instance because applyChapterFilter runs before EVERY view, and
+re-reading a file from a Kindle's flash on each menu open is a real cost for a
+value that cannot change while the plugin is loaded.
+]]
+function GrimoriaPlugin:spoilerIncludesCurrentChapter()
+    if self._include_current_chapter == nil then
+        local ok, v = pcall(function()
+            return require("lib/paths"):readSetting("include_current_chapter.txt")
+        end)
+        v = ok and v or nil
+        self._include_current_chapter =
+            (v == "1" or v == "true" or v == "yes" or v == "on")
+    end
+    return self._include_current_chapter
+end
+
+--[[
+How the current scope reads to the user.
+
+Shared, because filter_chapter can now be 0 -- the reader is inside chapter 1
+and has finished nothing -- and "showing up to chapter 0" is not a sentence.
+Lua makes this easy to get wrong twice: 0 is TRUTHY, so `if self.filter_chapter`
+does not guard it.
+]]
+function GrimoriaPlugin:describeScope()
+    if self.show_whole_book or self.filter_chapter == nil then
+        return self.loc:t("showing_whole_book")
+    end
+    if self.filter_chapter < 1 then
+        return self.loc:t("showing_nothing_yet")
+    end
+    return string.format(self.loc:t("showing_up_to_chapter"), self.filter_chapter)
+end
+
 function GrimoriaPlugin:toggleWholeBookView()
     self.show_whole_book = not self.show_whole_book
     self:applyChapterFilter()
-    UIManager:show(InfoMessage:new{
-        text = self.show_whole_book and self.loc:t("showing_whole_book")
-            or string.format(self.loc:t("showing_up_to_chapter"), self.filter_chapter or 1),
-        timeout = 2,
-    })
+    UIManager:show(InfoMessage:new{ text = self:describeScope(), timeout = 2 })
 end
 
 return GrimoriaPlugin

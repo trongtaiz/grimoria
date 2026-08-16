@@ -1,5 +1,5 @@
 --[[
-The plugin's methods live in seven lib/ modules and are mixed onto the class in
+The plugin's methods live in eight lib/ modules and are mixed onto the class in
 main.lua. That mixin is load-bearing and completely silent when it goes wrong:
 a module left out of the list, or a method renamed on one side only, produces a
 plugin that loads perfectly and then fails with "attempt to call a nil value"
@@ -69,7 +69,8 @@ local EXPECTED = {
         "onShowGrimoriaChapterCharacters", "onShowGrimoriaTimeline",
         "onShowGrimoriaHistorical", "onShowGrimoriaThemes", "onShowGrimoriaLocations",
     },
-    ["lib/spoilers"] = { "applyChapterFilter", "toggleWholeBookView" },
+    ["lib/spoilers"] = { "applyChapterFilter", "toggleWholeBookView",
+                         "spoilerIncludesCurrentChapter", "describeScope" },
     ["lib/fetch"] = {
         "fetchFromAI", "getMaxCharsSetting", "askSpoilerPreference", "holdDeviceAwake",
         "releaseDeviceAwake", "continueWithFetch", "makeCancelConfirmWidget",
@@ -98,11 +99,18 @@ local EXPECTED = {
         "showSummary", "showThemes", "showTimeline", "showHistoricalFigures",
         "showHistoricalFigureDetails", "showChapterCharacters",
     },
+    ["lib/updater"] = {
+        "checkForUpdates", "checkForUpdatesInner", "updaterRun", "updaterHealthCheck",
+        "revertLastUpdate", "updaterRevertNow", "updaterPluginDir", "updaterRepo",
+        "updaterLocalVersion", "updaterCompareVersions", "updaterFetchRelease",
+        "updaterFetchManifest", "updaterDownload", "updaterVerify", "updaterSwap",
+    },
 }
 
 local order = {
     "main.lua (shell)", "lib/spoilers", "lib/fetch", "lib/ui/menu",
     "lib/ui/settings", "lib/ui/versions", "lib/ui/notes", "lib/ui/views",
+    "lib/updater",
 }
 
 local total = 0
@@ -119,14 +127,16 @@ for _, group in ipairs(order) do
 end
 
 --[[
-66, not 67: main.lua had 67 top-level blocks before the split, and exactly one
-of them -- fuseCharacters -- is a plain local rather than a method. If this
-number ever drops, a method was dropped on the floor by an edit to the mixin
-list; if it climbs without this line being updated deliberately, someone added
-a method without deciding which module owns it.
+66 from the split, plus 15 for lib/updater and 2 for the current-chapter rule.
+
+66, not 67, at the split: main.lua had 67 top-level blocks before it, and
+exactly one of them -- fuseCharacters -- is a plain local rather than a method.
+If this number ever drops, a method was dropped on the floor by an edit to the
+mixin list; if it climbs without this line being updated deliberately, someone
+added a method without deciding which module owns it.
 ]]
 print("\n=== the split did not drop anything ===")
-check(total == 66, "66 methods accounted for across 8 files (counted " .. total .. ")")
+check(total == 83, "83 methods accounted for across 9 files (counted " .. total .. ")")
 
 -- fuseCharacters is a file-local in lib/spoilers.lua, deliberately not a method.
 check(Plugin.fuseCharacters == nil,

@@ -388,7 +388,52 @@ function Archive:loadCache(book_path)
 
     logger.info("Archive: loaded version", tostring(active.id),
                 "model", tostring(active.model or "unknown"))
-    return data
+    return self:normalise(data)
+end
+
+--[[
+Put a loaded analysis through the same validation a fresh reply gets.
+
+This used to happen only on the way IN -- validateAndCleanData ran on the
+model's reply, and everything read back off disk went straight to the display
+layer exactly as it had been written. That was survivable while the two ends
+agreed, and stopped being survivable the moment the spoiler rules changed:
+an analysis stored last month was produced under the old rules, still opens
+every day, and was reaching the filter with none of the guarantees the filter
+assumes. Concretely, a pre-versioning cache has no `intro` and no `by_chapter`,
+so the per-chapter rebuild produced nothing and the whole-book `description`
+written before any spoiler rule existed went on screen.
+
+Running it here means every rule -- present and future -- applies to analyses
+that predate it, without rewriting a single file on the reader's disk and
+without bumping PAYLOAD_VERSION, which would throw away every paid analysis on
+every device. That is why validateAndCleanData has to stay idempotent: a value
+now passes through it many times over its life rather than exactly once.
+
+Failure is not fatal: a normaliser that errors must not make a stored analysis
+unopenable, so the raw payload is returned and the display layer's own
+fail-closed defaults take over.
+]]
+function Archive:normalise(data)
+    local ok, LLM = pcall(require, "lib/llm")
+    if not ok or type(LLM) ~= "table" or type(LLM.validateAndCleanData) ~= "function" then
+        return data
+    end
+    local ok2, cleaned = pcall(function() return LLM:validateAndCleanData(data) end)
+    if not ok2 or type(cleaned) ~= "table" then
+        logger.warn("Archive: could not normalise the stored analysis:", tostring(cleaned))
+        return data
+    end
+
+    -- The leak scan runs here as well as at save time, so an analysis stored
+    -- before the guard existed gets it too -- without rewriting the file.
+    local ok3, guarded = pcall(function()
+        local SpoilerGuard = require("lib/spoilerguard")
+        return (SpoilerGuard.scan(cleaned))
+    end)
+    if ok3 and type(guarded) == "table" then return guarded end
+    logger.warn("Archive: spoiler guard did not run on the stored analysis")
+    return cleaned
 end
 
 -- ------------------------------------------------------------ management ----

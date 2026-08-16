@@ -59,7 +59,7 @@ out of the same 64000-token completion budget, and that is already the model's
 ceiling, so a run that leaves little headroom is one truncation away from the
 effort step-down in `callChatGPT`.
 
-Six free offline suites need no key and no book:
+Seven free offline suites need no key and no book:
 
 ```sh
 lua smoke_openrouter.lua ..   # provider table, routing, main.lua entry points
@@ -67,11 +67,15 @@ lua test_cancel.lua ..        # the cancel confirmation on the in-flight fetch
 lua test_localization.lua ..  # language discovery, .po parity, format specifiers
 lua test_wiring.lua ..        # every method resolves after the lib/ mixin
 lua test_updater.lua ..       # self-update: swap, rollback, revert
+lua test_spoiler.lua ..       # the governing rule, on synthetic fixtures
 
 # reads files written before the plugin was renamed; needs a built fixture
 python3 make_legacy_fixture.py tmp_fixture
 lua test_legacy.lua .. tmp_fixture
 ```
+
+`test_spoiler.lua` also takes a saved reply, and that is where it earns its
+keep — see below.
 
 `smoke_openrouter.lua` asserts that a provider with an `endpoint` routes to
 `callChatGPT` while Gemini does not, that the `custom` provider's placeholder
@@ -83,6 +87,12 @@ endpoint names no private host and still routes, and that `main.lua` loads.
 carry identical keys, that no key formats differently between them (a `%s` in
 one and not the other silently drops the value), and that every `loc:t()` call
 site in `main.lua` resolves.
+
+**Rebuild the legacy fixture before every run.** `test_legacy.lua` exercises
+*writes* as well as reads, so it mutates the fixture it was given; a second run
+against the same directory fails on checks that passed the first time.
+`make_legacy_fixture.py` deletes and recreates the tree, so re-running it is
+the whole fix.
 
 `test_legacy.lua` covers reading what the plugin wrote under its old name --
 settings and, more to the point, finished analyses that cost real money. The
@@ -96,6 +106,53 @@ test only ever asks which path gets opened.
 the eight `lib/` modules are mixed onto the class. Without it, a module left
 off the mixin list loads perfectly and then fails with "attempt to call a nil
 value" the first time someone opens that menu.
+
+`test_spoiler.lua` is the acceptance test for the spoiler design. Where
+`test_filter.lua` checks that one known reveal is handled correctly,
+this one asserts the general property — **at chapter *k*, no visible field may
+name an entity the reader has not met, and no value tagged later than *k* may
+render** — sweeping every chapter of whatever reply it is given, over
+characters, locations, themes, timeline entries and historical figures. Every
+leak found in this plugin so far was a case nobody had thought to test.
+
+Given a reply it runs the sweep **twice**: once on the analysis as the model
+wrote it, then again after `lib/spoilerguard`. The raw number is reported
+rather than asserted — a model writing a leak into its prose is a fact about
+the model — but the guarded pass must come back clean, and a separate check
+fails if the guard is ever holding back more than a small fraction of the
+analysis, so "0 leaks" can never be bought by hiding the book.
+
+```sh
+lua test_spoiler.lua .. ../../private/fixtures/reply.lua
+```
+
+`reply_tagged.lua` is the first reply produced under the chapter-tagged schema
+(`google/gemini-3.7-flash`, no reasoning, $0.079, 110.9s, 21,202 of 64,000
+completion tokens). It is the fixture that proves the schema is one a model
+actually follows: 42 of 42 character fields and 7 of 7 locations came back as
+`[{value, first_chapter}]` lists, and one field came back genuinely
+multi-valued — a character whose role is `Supporting` from chapter 12 and
+`Antagonist` from chapter 47, which is exactly the leak that started this work.
+
+Three things it deliberately does *not* treat as leaks, all three learned by
+running it and watching it cry wolf:
+
+- **A name in prose bound to a chapter the reader has read.** If chapter 12
+  says "they plan to go to Ajimu tomorrow", hiding that hides the book from
+  itself. Only *unbound* text — an intro, a role, a theme — is checked against
+  unmet names.
+- **A merge member's name as such.** The members of an identity merge are
+  usually all met early, so what is secret is the **connection**, not the
+  names. Checking the names flagged 548 non-leaks on one book.
+- **Diacritic-folded matches.** Folding looks obviously right for Vietnamese
+  and is obviously wrong: `Văn` (literature), `Vấn` (suspicion) and `Van` (a
+  name) are three different words. A folded matcher reported a leak on
+  `nghi vấn` and hid two characters introduced as literature students.
+  `validate.py` had already recorded this; the Lua side rediscovered it.
+
+The suite states its own blind spot too: it matches names, so a semantic leak
+carrying no name — a summary that foreshadows in the abstract — is invisible
+to it, and stays the prompt's responsibility.
 
 `test_updater.lua` covers the self-update, and the property it proves is not
 "the happy path works" — it is that **no failure leaves a half-installed

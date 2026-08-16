@@ -504,6 +504,30 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
         book_data.text_truncated = meta and meta.truncated or false
         book_data.grounded = book_text ~= nil
 
+        --[[
+        The leak scan, before anything else sees this analysis.
+
+        It runs HERE rather than next to saveCache below, because between the
+        two the data is assigned to self.book_data, filtered, and its counts
+        logged -- so a guard placed by the cache write would let the first view
+        after a fetch render unguarded data.
+
+        In the parent, never in the forked child: the child must not touch
+        anything the parent has a view of, and the whole value of this pass is
+        the warning line it writes, which needs to land in crash.log where it
+        can be read. It is pure table work, so it costs nothing here.
+        ]]
+        local guard_ok, retagged = pcall(function()
+            local SpoilerGuard = require("lib/spoilerguard")
+            local _, n = SpoilerGuard.scan(book_data)
+            return n
+        end)
+        if guard_ok then
+            logger.info("GrimoriaPlugin: spoiler guard re-tagged", tostring(retagged), "field(s)")
+        else
+            logger.warn("GrimoriaPlugin: spoiler guard failed:", tostring(retagged))
+        end
+
         -- Save data to plugin state
         self.book_title = book_data.book_title
         self.author = book_data.author
@@ -547,10 +571,7 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
             cache_msg                               -- %s: cache message
         )
 
-        if self.filter_chapter then
-            success_message = success_message .. "\n\n"
-                .. string.format(self.loc:t("showing_up_to_chapter"), self.filter_chapter)
-        end
+        success_message = success_message .. "\n\n" .. self:describeScope()
 
         UIManager:show(InfoMessage:new{
             text = success_message,

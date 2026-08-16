@@ -780,3 +780,77 @@ msgstr "Delete this analysis? The others are kept."
 
 msgid "unknown_model_version"
 msgstr "unknown model"
+
+# --- self-update -------------------------------------------------------------
+
+msgid "menu_check_updates"
+msgstr "Check for updates"
+
+msgid "menu_revert_update"
+msgstr "Revert last update"
+
+msgid "update_checking"
+msgstr "Checking for updates…"
+
+msgid "update_up_to_date"
+msgstr "Grimoria is up to date (version %s)."
+
+msgid "update_available"
+msgstr "Version %s is available.\nYou have %s.\n\n%d files will be downloaded and verified before anything is replaced."
+
+msgid "update_install"
+msgstr "Update"
+
+msgid "update_downloading"
+msgstr "Downloading %d files…"
+
+msgid "update_cancel_confirm"
+msgstr "Stop the update? Nothing has been replaced yet."
+
+msgid "update_cancelled"
+msgstr "Update cancelled. Nothing was changed."
+
+msgid "update_installed"
+msgstr "Version %s installed.\n\nRestart KOReader to load it. The previous version is kept, and \"Revert last update\" puts it back."
+
+msgid "update_failed"
+msgstr "Could not update"
+
+msgid "update_rolled_back"
+msgstr "The update failed and was rolled back. The previous version is still installed."
+
+msgid "update_no_repo"
+msgstr "No update repository is configured. Set update_repo in config.lua, or write \"owner/name\" into settings/grimoria/update_repo.txt."
+
+msgid "update_bad_release"
+msgstr "The release information could not be read."
+
+msgid "update_bad_manifest"
+msgstr "The release file list could not be read."
+
+msgid "update_contract_too_new"
+msgstr "This release needs a newer version of the plugin than can be installed automatically. Please update by hand once."
+
+msgid "update_needs_bridge"
+msgstr "Version %s needs a newer updater first.\n\nThe updater will be replaced now; run \"Check for updates\" again after restarting to install the rest."
+
+msgid "update_bridge_done"
+msgstr "Updater replaced for version %s.\n\nRestart KOReader, then run \"Check for updates\" again."
+
+msgid "update_no_backup"
+msgstr "There is no previous version to go back to."
+
+msgid "update_revert"
+msgstr "Revert"
+
+msgid "update_revert_confirm"
+msgstr "Put the previous version back? Your settings and stored analyses are not affected."
+
+msgid "update_reverted"
+msgstr "Reverted to version %s.\n\nRestart KOReader to load it."
+
+msgid "update_rollback_failed"
+msgstr "The update failed, and the previous version could not be put back automatically.\n\nEvery file is still here:\n%s\n\nCopy its contents over the plugin folder to restore the working version."
+
+msgid "showing_nothing_yet"
+msgstr "Nothing to show yet — finish chapter 1 first."

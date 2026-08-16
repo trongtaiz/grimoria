@@ -1,13 +1,20 @@
-# LF everywhere, on every platform.
+# Line endings are load-bearing here, which is not obvious.
 #
-# Not a style preference. The plugin folder is copied verbatim onto an e-reader,
-# and the .po parser in lib/i18n.lua reads translations with file:lines(), which
-# on a device strips \n but leaves a trailing \r on a CRLF file -- putting an
-# invisible carriage return on the end of every translated string. A checkout on
-# Windows would produce exactly that, so the line ending is pinned here rather
-# than left to core.autocrlf.
+# The self-updater verifies every downloaded file against a size and a SHA-256
+# recorded in update/manifest.json, and that manifest is generated from the
+# working tree by tools/make_release.py. If git normalises CRLF to LF on
+# commit, raw.githubusercontent.com serves bytes that do not match what was
+# hashed -- so every device that tried to update would download the release,
+# fail verification, and refuse it. The failure is total and silent as to its
+# cause: "expected 12071 bytes, got 11983".
+#
+# So: one line ending everywhere, in the repository AND in the working tree on
+# every platform, including a Windows checkout. Then what make_release hashes
+# is what git stores is what the updater downloads.
 * text=auto eol=lf
 
-# Keep the EPUB fixture and any packaged copy byte-exact if one is ever tracked.
+# Anything genuinely binary must be exempt, or the rule above corrupts it.
+*.png binary
+*.jpg binary
 *.epub binary
 *.zip binary

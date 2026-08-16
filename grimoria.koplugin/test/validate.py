@@ -216,12 +216,36 @@ def main(path):
     # leak in every second sentence of this book. Other characters mentioning
     # either identity is also fine and not checked -- both are people the cast
     # openly meets; the secret is only that they are the same person.
+    def visible_values(field, upto):
+        """Flatten a chapter-tagged field to the text visible at `upto`.
+
+        role/gender/occupation became lists of {value, first_chapter} so that a
+        job or allegiance taken later in the book cannot be shown from the
+        start. A plain string is still accepted: that is what every analysis
+        written before the change holds, and what a model ignoring the schema
+        sends back.
+        """
+        if isinstance(field, str):
+            return [field]
+        if not isinstance(field, list):
+            return []
+        out = []
+        for item in field:
+            if isinstance(item, str):
+                out.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("value"), str):
+                if (item.get("first_chapter") or 1) <= upto:
+                    out.append(item["value"])
+        return out
+
     leaks = []
     for c in vis_before:
         if c.get("name") not in members:
             continue
         blob = " ".join(filter(None, [
-            c.get("intro"), c.get("role"), c.get("occupation"),
+            c.get("intro"),
+            *visible_values(c.get("role"), before),
+            *visible_values(c.get("occupation"), before),
             *[bc.get("development") for bc in (c.get("by_chapter") or [])
               if bc.get("chapter", 1) <= before],
         ]))

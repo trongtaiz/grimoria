@@ -784,3 +784,77 @@ msgstr "Xoá bản phân tích này? Các bản khác vẫn được giữ."
 
 msgid "unknown_model_version"
 msgstr "mô hình không rõ"
+
+# --- self-update -------------------------------------------------------------
+
+msgid "menu_check_updates"
+msgstr "Kiểm tra cập nhật"
+
+msgid "menu_revert_update"
+msgstr "Quay lại bản trước"
+
+msgid "update_checking"
+msgstr "Đang kiểm tra cập nhật…"
+
+msgid "update_up_to_date"
+msgstr "Grimoria đã là bản mới nhất (phiên bản %s)."
+
+msgid "update_available"
+msgstr "Đã có phiên bản %s.\nBạn đang dùng %s.\n\n%d tệp sẽ được tải và kiểm tra xong xuôi trước khi thay thế bất cứ thứ gì."
+
+msgid "update_install"
+msgstr "Cập nhật"
+
+msgid "update_downloading"
+msgstr "Đang tải %d tệp…"
+
+msgid "update_cancel_confirm"
+msgstr "Dừng cập nhật? Chưa có tệp nào bị thay thế."
+
+msgid "update_cancelled"
+msgstr "Đã huỷ cập nhật. Không có gì thay đổi."
+
+msgid "update_installed"
+msgstr "Đã cài phiên bản %s.\n\nHãy khởi động lại KOReader để dùng. Bản cũ vẫn được giữ, và \"Quay lại bản trước\" sẽ khôi phục nó."
+
+msgid "update_failed"
+msgstr "Không cập nhật được"
+
+msgid "update_rolled_back"
+msgstr "Cập nhật thất bại và đã được hoàn tác. Bản cũ vẫn đang được cài."
+
+msgid "update_no_repo"
+msgstr "Chưa cấu hình kho cập nhật. Hãy đặt update_repo trong config.lua, hoặc ghi \"owner/name\" vào settings/grimoria/update_repo.txt."
+
+msgid "update_bad_release"
+msgstr "Không đọc được thông tin bản phát hành."
+
+msgid "update_bad_manifest"
+msgstr "Không đọc được danh sách tệp của bản phát hành."
+
+msgid "update_contract_too_new"
+msgstr "Bản phát hành này cần một phiên bản plugin mới hơn mức có thể cài tự động. Hãy cập nhật thủ công một lần."
+
+msgid "update_needs_bridge"
+msgstr "Phiên bản %s cần bộ cập nhật mới hơn trước đã.\n\nBộ cập nhật sẽ được thay ngay bây giờ; hãy khởi động lại rồi chạy \"Kiểm tra cập nhật\" lần nữa để cài phần còn lại."
+
+msgid "update_bridge_done"
+msgstr "Đã thay bộ cập nhật cho phiên bản %s.\n\nHãy khởi động lại KOReader, rồi chạy \"Kiểm tra cập nhật\" lần nữa."
+
+msgid "update_no_backup"
+msgstr "Không có bản trước nào để quay lại."
+
+msgid "update_revert"
+msgstr "Quay lại"
+
+msgid "update_revert_confirm"
+msgstr "Khôi phục bản trước? Cài đặt và các bản phân tích đã lưu không bị ảnh hưởng."
+
+msgid "update_reverted"
+msgstr "Đã quay lại phiên bản %s.\n\nHãy khởi động lại KOReader để dùng."
+
+msgid "update_rollback_failed"
+msgstr "Cập nhật thất bại, và không thể tự động khôi phục bản cũ.\n\nToàn bộ tệp vẫn nằm ở đây:\n%s\n\nHãy chép nội dung thư mục đó đè lên thư mục plugin để khôi phục bản đang chạy được."
+
+msgid "showing_nothing_yet"
+msgstr "Chưa có gì để hiện — hãy đọc xong chương 1 đã."

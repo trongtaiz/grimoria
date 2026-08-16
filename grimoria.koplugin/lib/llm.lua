@@ -1512,13 +1512,70 @@ function LLM:validateAndCleanData(data)
 
     data.book_language = ensureString(data.book_language, "")
 
-    -- 2. KARAKTERLER
+    -- 2. CHARACTERS
     -- This rebuilds each character rather than passing it through, so any new
     -- field must be listed here or it is silently dropped -- which is exactly
     -- what would happen to by_chapter, the whole point of the redesign.
     local function toInt(v, d)
         local n = tonumber(v)
         return (n and n > 0) and math.floor(n) or d
+    end
+
+    --[[
+    The book's last chapter, needed before the chapters list is cleaned below,
+    because every fail-closed default resolves to it.
+
+    "Untagged means end-of-book" is the rule the whole spoiler design rests on
+    (see lib/spoilers.lua). It has to be a number this function knows up front,
+    or the defaults quietly become 1 again.
+    ]]
+    local last_chapter = 1
+    for i, ch in ipairs(data.chapters or {}) do
+        if type(ch) == "table" then
+            -- Position stands in for a missing index, matching what the
+            -- chapter cleanup below does. Taking 1 for an untitled index would
+            -- put "end-of-book" at chapter 1 and undo every default at once.
+            last_chapter = math.max(last_chapter, toInt(ch.index, i), i)
+        end
+    end
+
+    --[[
+    Coerce a value that may change over the book into a chapter-tagged list.
+
+    Three inputs, and all three have to keep working forever:
+
+      already a list   {{value=..., first_chapter=n}, ...}  -- cleaned, not
+                       re-wrapped. This function now runs on every cache load
+                       as well as on every fresh reply, so a value passes
+                       through it many times over its life; wrapping a wrapped
+                       value would bury the real one one level deeper each
+                       time.
+      a plain string   what every analysis written before this change holds,
+                       and what a model that ignores the schema will send. No
+                       chapter information at all, so: end-of-book.
+      anything else    dropped.
+
+    `dflt` is the chapter an untagged entry lands on. Callers pass
+    last_chapter for anything with no independent evidence of when it appears.
+    ]]
+    local function toTagged(v, dflt)
+        local out = {}
+        if type(v) == "string" then
+            if #v > 0 then out[1] = { value = v, first_chapter = dflt } end
+        elseif type(v) == "table" then
+            for _, item in ipairs(v) do
+                if type(item) == "table" and type(item.value) == "string" and #item.value > 0 then
+                    out[#out + 1] = {
+                        value = item.value,
+                        first_chapter = toInt(item.first_chapter, dflt),
+                    }
+                elseif type(item) == "string" and #item > 0 then
+                    out[#out + 1] = { value = item, first_chapter = dflt }
+                end
+            end
+            table.sort(out, function(a, b) return a.first_chapter < b.first_chapter end)
+        end
+        return out
     end
 
     local chars = data.characters or data.Characters or {}
@@ -1529,24 +1586,46 @@ function LLM:validateAndCleanData(data)
             for _, bc in ipairs(c.by_chapter or {}) do
                 if type(bc) == "table" and bc.development then
                     table.insert(by_chapter, {
-                        chapter = toInt(bc.chapter, 1),
+                        -- An untagged development is end-of-book too: it is a
+                        -- sentence about something that happens, and nothing
+                        -- says it happens early.
+                        chapter = toInt(bc.chapter, last_chapter),
                         development = ensureString(bc.development, ""),
                     })
                 end
             end
             table.sort(by_chapter, function(a, b) return a.chapter < b.chapter end)
 
+            --[[
+            When a character has no first_chapter, the earliest chapter they
+            actually appear in is EVIDENCE, and evidence beats the fail-closed
+            default -- so by_chapter is consulted before falling back.
+
+            The fallback itself flipped from 1 to end-of-book, and that is a
+            trade with a visible cost: a character the model gave no position
+            for at all now stays hidden until the last chapter, which a reader
+            experiences as the plugin having lost a character. Showing them
+            from chapter 1 was the other error, and it is the one that hands
+            over the plot. Hiding is recoverable -- the whole-book toggle is
+            one tap; being spoiled is not.
+            ]]
             local intro = ensureString(c.intro, "")
             table.insert(valid_chars, {
                 name = ensureString(c.name or c.Name, strings.unnamed_character),
-                role = ensureString(c.role or c.Role, strings.not_specified),
-                -- Older caches and the no-text fallback path still use
-                -- `description`; keep it populated so the views never go blank.
-                description = ensureString(c.description or c.desc, intro ~= "" and intro or strings.no_description),
+                -- role/gender/occupation are chapter-tagged now: a character's
+                -- job, rank or allegiance can change over a book, and a static
+                -- string could only ever describe the end of it.
+                role = toTagged(c.role or c.Role, last_chapter),
+                gender = toTagged(c.gender, last_chapter),
+                occupation = toTagged(c.occupation, last_chapter),
+                -- `description` is written whole-book by definition and is
+                -- rebuilt per chapter by lib/spoilers.lua, so it is NOT
+                -- carried over from the reply: a pre-versioning cache's
+                -- whole-book description used to survive into the view
+                -- whenever the rebuild produced nothing.
                 intro = intro,
-                gender = ensureString(c.gender, ""),
-                occupation = ensureString(c.occupation, ""),
-                first_chapter = toInt(c.first_chapter, by_chapter[1] and by_chapter[1].chapter or 1),
+                first_chapter = toInt(c.first_chapter,
+                    by_chapter[1] and by_chapter[1].chapter or last_chapter),
                 by_chapter = by_chapter,
             })
         end
@@ -1612,21 +1691,43 @@ function LLM:validateAndCleanData(data)
     table.sort(chapters, function(a, b) return a.index < b.index end)
     data.chapters = chapters
 
-    -- Locations gain first_chapter so they can be filtered like characters.
+    --[[
+    Locations gain first_chapter so they can be filtered like characters, and
+    their prose is chapter-tagged for the same reason a character's job is: a
+    place the reader has seen once can turn out later to be where the body was
+    buried, and a single untagged sentence describing it says so from the
+    first time the name appears.
+
+    Unlike a character, a location carries no by_chapter to derive a position
+    from, so an untagged one has nothing to appeal to and lands on end-of-book.
+    ]]
     local locs = {}
     for _, l in ipairs(data.locations or {}) do
         if type(l) == "table" then
             table.insert(locs, {
                 name = ensureString(l.name, ""),
-                description = ensureString(l.description, ""),
-                importance = ensureString(l.importance, ""),
-                first_chapter = toInt(l.first_chapter, 1),
+                description = toTagged(l.description, last_chapter),
+                importance = toTagged(l.importance, last_chapter),
+                first_chapter = toInt(l.first_chapter, last_chapter),
             })
         end
     end
     data.locations = locs
 
-    -- 3. HISTORICAL FIGURES
+    --[[
+    3. HISTORICAL FIGURES
+
+    These were exempt from filtering entirely, on the reasoning that a real
+    person referenced by the text carries less plot than a theme does. The
+    actual reason was that they had no chapter field to filter on, and "we
+    cannot filter this" is not the same claim as "this is safe to show".
+
+    `context_in_book` in particular is a sentence about what THE BOOK does with
+    that person, which on a historical novel is the plot. So they get a
+    first_chapter like everything else, their book-facing prose is tagged, and
+    only the biography -- general knowledge, true before the book was written --
+    passes through untouched.
+    ]]
     local hists = data.historical_figures or data.historicalFigures or {}
     local valid_hists = {}
     for _, h in ipairs(hists) do
@@ -1634,9 +1735,10 @@ function LLM:validateAndCleanData(data)
             table.insert(valid_hists, {
                 name = ensureString(h.name or h.Name, strings.unnamed_person),
                 biography = ensureString(h.biography or h.bio, strings.no_biography),
-                role = ensureString(h.role, ""),
-                importance_in_book = ensureString(h.importance_in_book or h.importance, "Mentioned in the book"),
-                context_in_book = ensureString(h.context_in_book or h.context, "Period reference")
+                role = toTagged(h.role, last_chapter),
+                importance_in_book = toTagged(h.importance_in_book or h.importance, last_chapter),
+                context_in_book = toTagged(h.context_in_book or h.context, last_chapter),
+                first_chapter = toInt(h.first_chapter, last_chapter),
             })
         end
     end
@@ -1655,8 +1757,8 @@ function LLM:validateAndCleanData(data)
     reader reaches the last chapter. That hides some harmless themes, which is
     the right way round for a filter whose job is to not spoil the ending.
     ]]
-    local last_chapter = #data.chapters > 0
-        and data.chapters[#data.chapters].index or 1
+    -- last_chapter is computed once at the top of this function now, because
+    -- every fail-closed default in it resolves to the same number.
     local themes = {}
     for _, t in ipairs(data.themes or {}) do
         if type(t) == "string" and #t > 0 then
@@ -1673,9 +1775,17 @@ function LLM:validateAndCleanData(data)
     end
     data.themes = themes
 
-    -- The AI no longer returns a flat timeline; it comes from chapters[].events.
-    -- Build it here so the existing timeline view keeps working unchanged, and
-    -- tag each entry with its chapter so the spoiler filter can cut it.
+    --[[
+    The AI no longer returns a flat timeline; it comes from chapters[].events.
+    Build it here so the existing timeline view keeps working unchanged, and
+    tag each entry with its chapter so the spoiler filter can cut it.
+
+    An analysis that already HAS a flat timeline is one written before that
+    change, and it used to be left exactly as it arrived -- the one collection
+    in this function that was never rebuilt field by field. Its entries carry
+    no chapter_index, so they are rebuilt here and tagged end-of-book, which
+    is what an event with no chapter has to mean.
+    ]]
     if not data.timeline or #data.timeline == 0 then
         local timeline = {}
         for _, ch in ipairs(data.chapters) do
@@ -1685,6 +1795,20 @@ function LLM:validateAndCleanData(data)
                     importance = ev.importance,
                     chapter = ch.title ~= "" and ch.title or tostring(ch.index),
                     chapter_index = ch.index,
+                })
+            end
+        end
+        data.timeline = timeline
+    else
+        local timeline = {}
+        for _, ev in ipairs(data.timeline) do
+            if type(ev) == "table" then
+                local at = toInt(ev.chapter_index, last_chapter)
+                table.insert(timeline, {
+                    event = ensureString(ev.event, ""),
+                    importance = ensureString(ev.importance, ""),
+                    chapter = ensureString(ev.chapter, tostring(at)),
+                    chapter_index = at,
                 })
             end
         end

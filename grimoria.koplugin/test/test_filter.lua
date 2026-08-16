@@ -86,8 +86,16 @@ local function check(cond, msg)
     print((cond and "  PASS  " or "  FAIL  ") .. msg)
 end
 
+--[[
+`n` is the last chapter the reader has FINISHED.
+
+The extractor reports the chapter they are inside, and the filter shows only
+finished chapters -- so reading through chapter n means standing in n+1. That
+distinction is the fix for a leak reported from use: the plugin was showing
+chapter 12's contents to somebody two paragraphs into chapter 12.
+]]
 local function namesAtChapter(n)
-    FakeExtractor.chapter = n
+    FakeExtractor.chapter = n + 1
     plugin.show_whole_book = false
     plugin:applyChapterFilter()
     local set, list = {}, {}

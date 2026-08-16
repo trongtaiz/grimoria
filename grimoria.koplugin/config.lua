@@ -1,6 +1,18 @@
 -- Grimoria API Configuration
 
 return {
+    --[[
+    Where "Check for updates" looks, as "owner/name" on GitHub.
+
+    Here rather than hardcoded so a fork updates from itself instead of from
+    upstream, and overridable from settings/grimoria/update_repo.txt like every
+    other setting. While it reads as a placeholder the menu entry says the
+    updater is not configured rather than fetching from somebody else's
+    repository -- an updater that silently points somewhere unexpected is a way
+    to install arbitrary code on a reader's device.
+    ]]
+    update_repo = "trongtaiz/grimoria",
+
     gemini_api_key = "PASTE-YOUR-KEY-HERE",
 
     -- Every gemini-2.5-* model now returns 404 "no longer available to new

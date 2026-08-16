@@ -45,10 +45,11 @@ function GrimoriaPlugin:autoLoadCache()
             logger.info("GrimoriaPlugin: reader mode auto-enabled")
         end
         
-        local scope = ""
-        if self.filter_chapter then
-            scope = "\n" .. string.format(self.loc:t("showing_up_to_chapter"), self.filter_chapter)
-        end
+        -- Through describeScope, not a format on the number: filter_chapter is
+        -- 0 while the reader is still inside chapter 1, and 0 is TRUTHY in Lua,
+        -- so `if self.filter_chapter` used to render "up to chapter 0" here --
+        -- the first line a user sees after paying for an analysis.
+        local scope = "\n" .. self:describeScope()
 
         UIManager:show(InfoMessage:new{
             text = self.loc:t("grimoria_ready") .. "\n\n" ..
@@ -100,8 +101,8 @@ end
 --[[
 One line per stored analysis, so two runs are distinguishable at a glance:
 
-    > gpt-5.5-high - 14 Aug 00:52 - 56 ch, 21 chars, 2 merges
-      gemini-3.6-flash - 13 Aug 22:51 - 56 ch, 15 chars, 1 merge
+    > gpt-5.5-high - 14 Aug 00:52 - 56 ch, 21 chars
+      gemini-3.6-flash - 13 Aug 22:51 - 56 ch, 15 chars
 
 Caches written before versioning carry no model, and guessing from the current
 settings would be confidently wrong for any analysis made with another model,
@@ -117,10 +118,16 @@ function GrimoriaPlugin:describeVersion(v, is_active)
     local when = v.created_at and v.created_at > 0
         and os.date("%d %b %H:%M", v.created_at) or "?"
 
+    --[[
+    The merge count used to be appended here ("56 ch, 21 chars, 2 merges") to
+    tell two runs apart. It is a spoiler: a merge exists only where the book
+    hides an identity and later reveals it, so the line announced "this novel
+    has two hidden-identity twists" to a reader on chapter two -- the exact
+    fact the whole fusing mechanism exists to withhold until the text gives it
+    away. Chapters and characters are counts of things the reader can already
+    see the existence of; the number of twists is not.
+    ]]
     local stats = string.format("%d ch, %d chars", v.chapters or 0, v.characters or 0)
-    if (v.merges or 0) > 0 then
-        stats = stats .. string.format(", %d merges", v.merges)
-    end
 
     -- Literal UTF-8, not a "\u{2713}" escape: that is Lua 5.3 syntax and
     -- KOReader runs LuaJIT, where it fails to parse and takes the whole

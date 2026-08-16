@@ -1,0 +1,786 @@
+# Vietnamese translation
+# This file is distributed under the same license as the package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 3.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-17 12:00+0000\n"
+"PO-Revision-Date: 2026-08-17 12:00+0000\n"
+"Language-Team: Vietnamese\n"
+"Language: vi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# ==============================
+# MENU
+# ==============================
+
+msgid "menu_grimoria"
+msgstr "Grimoria"
+
+msgid "menu_characters"
+msgstr "Nhân vật"
+
+msgid "menu_chapter_characters"
+msgstr "Nhân vật trong chương này"
+
+msgid "menu_character_notes"
+msgstr "Ghi chú của tôi"
+
+msgid "menu_timeline"
+msgstr "Dòng thời gian"
+
+msgid "menu_historical_figures"
+msgstr "Nhân vật lịch sử"
+
+msgid "menu_locations"
+msgstr "Địa điểm"
+
+msgid "menu_author_info"
+msgstr "Về tác giả"
+
+msgid "menu_summary"
+msgstr "Tóm tắt"
+
+msgid "menu_themes"
+msgstr "Chủ đề"
+
+msgid "menu_fetch_ai"
+msgstr "Phân tích bằng AI"
+
+msgid "menu_ai_settings"
+msgstr "Cài đặt AI"
+
+msgid "menu_clear_cache"
+msgstr "Xoá dữ liệu đã lưu"
+
+msgid "menu_grimoria_mode"
+msgstr "Chế độ Grimoria:"
+
+msgid "menu_language"
+msgstr "Ngôn ngữ"
+
+msgid "menu_about"
+msgstr "Giới thiệu"
+
+# ==============================
+# AI SETTINGS & PROVIDERS
+# ==============================
+
+msgid "menu_gemini_key"
+msgstr "Khoá API Google Gemini"
+
+msgid "menu_gemini_model"
+msgstr "Chọn mô hình Gemini"
+
+msgid "menu_chatgpt_key"
+msgstr "Khoá API ChatGPT"
+
+msgid "menu_provider_select"
+msgstr "Chọn nhà cung cấp AI"
+
+msgid "gemini_model_title"
+msgstr "Chọn mô hình Gemini"
+
+msgid "gemini_model_flash"
+msgstr "Nhanh nhất"
+
+msgid "gemini_model_pro"
+msgstr "Cân bằng, mạnh hơn"
+
+msgid "gemini_model_flash_15"
+msgstr "Nhanh và tiết kiệm"
+
+msgid "unknown_model"
+msgstr "Mô hình không xác định."
+
+msgid "model_selected"
+msgstr "Đã chọn mô hình"
+
+msgid "gemini_model_flash_info"
+msgstr "Mô hình: Gemini Flash\n\nƯu điểm:\n• Phản hồi rất nhanh\n• Chi phí thấp nhất"
+
+msgid "gemini_model_pro_info"
+msgstr "Mô hình: Gemini Pro\n\nƯu điểm:\n• Chất lượng cao\n• Phân tích phức tạp tốt hơn"
+
+msgid "gemini_model_3_pro_info"
+msgstr "Mô hình: Gemini Pro\n\nĐã chọn mô hình mạnh nhất hiện có."
+
+# ==============================
+# TRẠNG THÁI
+# ==============================
+
+msgid "grimoria_mode_active"
+msgstr "Bật"
+
+msgid "grimoria_mode_inactive"
+msgstr "Tắt"
+
+msgid "events"
+msgstr "sự kiện"
+
+# ==============================
+# THÔNG BÁO
+# ==============================
+
+msgid "no_character_data"
+msgstr "Chưa có dữ liệu nhân vật. Hãy chạy \"Phân tích bằng AI\" trước."
+
+msgid "no_char_data_fetch"
+msgstr "Chưa có thông tin nhân vật.\n\nHãy chạy phân tích bằng AI trước."
+
+msgid "no_location_data"
+msgstr "Chưa có dữ liệu địa điểm. Hãy chạy \"Phân tích bằng AI\" trước."
+
+msgid "no_author_data"
+msgstr "Chưa có thông tin tác giả. Hãy chạy \"Phân tích bằng AI\" trước."
+
+msgid "no_summary_data"
+msgstr "Chưa có phần tóm tắt. Hãy chạy \"Phân tích bằng AI\" trước."
+
+msgid "no_theme_data"
+msgstr "Chưa có dữ liệu chủ đề. Hãy chạy \"Phân tích bằng AI\" trước."
+
+msgid "no_timeline_data"
+msgstr "Chưa có dòng thời gian.\n\nHãy chạy \"Phân tích bằng AI\" trước.\n\nAI sẽ liệt kê các sự kiện chính\ntheo đúng thứ tự."
+
+msgid "no_historical_data"
+msgstr "Chưa có dữ liệu nhân vật lịch sử.\n\nHãy chạy \"Phân tích bằng AI\" trước.\n\nAI sẽ tìm những nhân vật có thật\nđược nhắc đến trong sách."
+
+# ==============================
+# CACHE
+# ==============================
+
+msgid "grimoria_ready"
+msgstr "Grimoria đã sẵn sàng!"
+
+msgid "characters_loaded"
+msgstr "nhân vật"
+
+msgid "locations_loaded"
+msgstr "địa điểm"
+
+msgid "themes_loaded"
+msgstr "chủ đề"
+
+msgid "no_cache_found"
+msgstr "Không tìm thấy dữ liệu đã lưu"
+
+msgid "checking_cache"
+msgstr "Đã tải từ bộ nhớ!"
+
+msgid "cache_verify"
+msgstr "Sách này đã có dữ liệu.\nMuốn phân tích lại thì phải xoá dữ liệu cũ trước.\n\nĐường dẫn: Menu → Grimoria → Xoá dữ liệu đã lưu"
+
+msgid "cache_saved"
+msgstr "💾 Đã lưu!"
+
+msgid "cache_save_failed"
+msgstr "❌ Lưu thất bại"
+
+msgid "cache_clear_confirm"
+msgstr "Xác nhận xoá dữ liệu\n\nNếu xoá, những thứ sau sẽ mất:\n\n• Toàn bộ thông tin nhân vật\n• Dòng thời gian\n• Nhân vật lịch sử\n• Địa điểm và chủ đề\n• Thông tin tác giả\n\nBạn sẽ phải phân tích lại bằng AI.\n\nBạn có chắc muốn xoá không?"
+
+msgid "yes_clear"
+msgstr "Xoá"
+
+msgid "cancel"
+msgstr "Huỷ"
+
+msgid "cache_cleared"
+msgstr "Đã xoá dữ liệu!\n\nBạn có thể phân tích lại:\nMenu → Grimoria → Phân tích bằng AI"
+
+msgid "cache_not_found"
+msgstr "Không tìm thấy dữ liệu hoặc không xoá được"
+
+# ==============================
+# CHI TIẾT NHÂN VẬT
+# ==============================
+
+msgid "character_name"
+msgstr "Nhân vật:"
+
+msgid "description"
+msgstr "Mô tả:"
+
+msgid "role"
+msgstr "Vai trò:"
+
+msgid "gender"
+msgstr "Giới tính:"
+
+msgid "occupation"
+msgstr "Nghề nghiệp:"
+
+msgid "not_specified"
+msgstr "Không rõ"
+
+msgid "no_description"
+msgstr "Chưa có mô tả"
+
+msgid "unnamed_character"
+msgstr "Nhân vật chưa có tên"
+
+msgid "unknown_character"
+msgstr "Nhân vật không xác định"
+
+msgid "gender_male"
+msgstr "Nam"
+
+msgid "gender_female"
+msgstr "Nữ"
+
+# ==============================
+# PHÂN TÍCH AI
+# ==============================
+
+msgid "book_title"
+msgstr "Sách:"
+
+msgid "characters_count"
+msgstr "Nhân vật:"
+
+msgid "locations_count"
+msgstr "Địa điểm:"
+
+msgid "themes_count"
+msgstr "Chủ đề:"
+
+msgid "events_count"
+msgstr "Sự kiện:"
+
+msgid "historical_count"
+msgstr "Nhân vật lịch sử:"
+
+msgid "cache_age"
+msgstr "Đã lưu được:"
+
+msgid "days_old"
+msgstr "ngày"
+
+msgid "unlimited_valid"
+msgstr "Không có hạn sử dụng!"
+
+msgid "fetch_new_data"
+msgstr "Để phân tích lại:\nMenu → Grimoria → Xoá dữ liệu đã lưu"
+
+msgid "no_api_key"
+msgstr "⚠️ Chưa đặt khoá API!"
+
+msgid "fetching_ai"
+msgstr "🤖 Đang gửi tới %s..."
+
+msgid "fetching_model"
+msgstr "Mô hình: "
+
+msgid "fetching_wait"
+msgstr "⏳ Vui lòng đợi..."
+
+msgid "dont_touch"
+msgstr "Đừng chạm vào màn hình."
+
+msgid "ai_fetch_failed"
+msgstr "Phân tích thất bại!\n\nNguyên nhân có thể:\n• Khoá API không hợp lệ\n• Không có kết nối mạng\n• Đã vượt giới hạn API"
+
+msgid "ai_fetch_complete"
+msgstr "✅ Đã phân tích xong bằng %s\n\n📖 %s\n👤 %s\n\n👥 %d | 📍 %d | 🎨 %d | 📅 %d | 📜 %d\n\n%s"
+
+# ==============================
+# CHẾ ĐỘ GRIMORIA & TÌM KIẾM
+# ==============================
+
+msgid "grimoria_mode_no_data"
+msgstr "Cần phân tích trước khi bật chế độ Grimoria!\n\nMenu → Grimoria → Phân tích bằng AI"
+
+msgid "grimoria_mode_enabled"
+msgstr "Đã bật chế độ Grimoria!\n\nĐể tìm nhân vật:\nMenu → Grimoria → Nhân vật → Tìm kiếm"
+
+msgid "grimoria_mode_disabled"
+msgstr "Đã tắt chế độ Grimoria"
+
+msgid "search_character"
+msgstr "Tìm nhân vật..."
+
+msgid "search_character_title"
+msgstr "Tìm nhân vật"
+
+msgid "search_hint"
+msgstr "Nhập tên nhân vật"
+
+msgid "search_button"
+msgstr "Tìm"
+
+msgid "character_not_found"
+msgstr "Không tìm thấy nhân vật: %s\n\nGợi ý: thử nhập một phần của tên"
+
+# ==============================
+# DÒNG THỜI GIAN & CHƯƠNG
+# ==============================
+
+msgid "timeline_event"
+msgstr "Sự kiện #%d"
+
+msgid "chapter"
+msgstr "Chương:"
+
+msgid "characters_involved"
+msgstr "Nhân vật:"
+
+msgid "importance"
+msgstr "Mức quan trọng:"
+
+msgid "analyzing_chapter"
+msgstr "Đang phân tích chương...\n\nVui lòng đợi"
+
+msgid "chapter_text_error"
+msgstr "Không đọc được nội dung chương"
+
+msgid "no_characters_in_chapter"
+msgstr "Không tìm thấy nhân vật nào trong chương này.\n\nChương: %s"
+
+msgid "this_chapter"
+msgstr "Chương này"
+
+msgid "chapter_chars_title"
+msgstr "Nhân vật"
+
+# ==============================
+# GHI CHÚ
+# ==============================
+
+msgid "character_notes_title"
+msgstr "Ghi chú nhân vật (%d ghi chú)"
+
+msgid "add_note"
+msgstr "Thêm ghi chú"
+
+msgid "note_saved"
+msgstr "Đã lưu ghi chú!\n\n%s"
+
+msgid "note_deleted"
+msgstr "Đã xoá ghi chú!\n\n%s"
+
+msgid "add_note_title"
+msgstr "Thêm ghi chú cho %s"
+
+msgid "note_hint"
+msgstr "Ghi chú của bạn về nhân vật này..."
+
+msgid "save"
+msgstr "Lưu"
+
+msgid "delete"
+msgstr "Xoá"
+
+# ==============================
+# MENU NHANH
+# ==============================
+
+msgid "quick_menu_title"
+msgstr "Truy cập nhanh Grimoria"
+
+msgid "fetch_data"
+msgstr "Phân tích bằng AI"
+
+# ==============================
+# KHOÁ API
+# ==============================
+
+msgid "gemini_key_title"
+msgstr "Khoá API Google Gemini"
+
+msgid "gemini_key_hint"
+msgstr "Khoá API"
+
+msgid "gemini_key_desc"
+msgstr "Lấy khoá miễn phí tại:\nhttps://aistudio.google.com/apikey\n\nKhoá được lưu ngoài thư mục plugin, trong settings/grimoria/."
+
+msgid "testing_key"
+msgstr "Đang kiểm tra khoá API..."
+
+msgid "gemini_key_saved"
+msgstr "Đã lưu khoá API Gemini!"
+
+msgid "key_test_failed"
+msgstr "Đã lưu khoá nhưng kiểm tra thất bại!\n\nLỗi: %s\n\nVui lòng kiểm tra lại khoá API."
+
+msgid "chatgpt_key_title"
+msgstr "Khoá API ChatGPT"
+
+msgid "chatgpt_key_hint"
+msgstr "sk-..."
+
+msgid "chatgpt_key_desc"
+msgstr "Lấy khoá tại:\nhttps://platform.openai.com/api-keys\n\nKhoá được lưu ngoài thư mục plugin, trong settings/grimoria/."
+
+msgid "chatgpt_key_saved"
+msgstr "Đã lưu khoá API ChatGPT!"
+
+# ==============================
+# CHỌN NHÀ CUNG CẤP
+# ==============================
+
+msgid "provider_select_title"
+msgstr "Chọn nhà cung cấp AI"
+
+msgid "gemini_selected"
+msgstr "Đã chọn Google Gemini"
+
+msgid "chatgpt_selected"
+msgstr "Đã chọn ChatGPT"
+
+msgid "set_key_first"
+msgstr "Hãy đặt khoá API trước"
+
+msgid "provider_active"
+msgstr "Đang dùng"
+
+msgid "provider_selected"
+msgstr "Đã chọn %s"
+
+msgid "provider_no_key"
+msgstr "Chưa có khoá API"
+
+msgid "yes"
+msgstr "CÓ"
+
+msgid "no"
+msgstr "KHÔNG"
+
+# ==============================
+# TIÊU ĐỀ KHÁC
+# ==============================
+
+msgid "summary_title"
+msgstr "Tóm tắt sách"
+
+msgid "themes_title"
+msgstr "Chủ đề của sách"
+
+msgid "hist_bio"
+msgstr "Tiểu sử"
+
+msgid "hist_importance"
+msgstr "Vai trò trong sách"
+
+msgid "hist_context"
+msgstr "Bối cảnh trong sách"
+
+# ==============================
+# GIỚI THIỆU
+# ==============================
+
+msgid "about_title"
+msgstr "Grimoria"
+
+msgid "about_text"
+msgstr ""
+"Grimoria cho KOReader\n"
+"═══════════════════════════════\n"
+"\n"
+"NÓ LÀM GÌ?\n"
+"Gửi chính nội dung cuốn sách bạn đang đọc cho AI, đúng một lần,\n"
+"rồi dựng nên một mục lục tra cứu: nhân vật, địa điểm, chủ đề,\n"
+"dòng thời gian và các nhân vật lịch sử.\n"
+"\n"
+"ĐIỂM KHÁC BIỆT\n"
+"Mỗi mục đều được gắn số chương. Nhờ vậy phần bạn chưa đọc tới\n"
+"được ẩn đi ngay trên máy — không cần gọi AI lần nữa, không tốn\n"
+"thêm chi phí. Càng đọc, Grimoria càng mở ra thêm.\n"
+"\n"
+"Kể cả khi một nhân vật xuất hiện dưới hai cái tên, hai thẻ đó\n"
+"vẫn tách rời nhau cho tới đúng chương mà cuốn sách tự nối chúng\n"
+"lại.\n"
+"\n"
+"═══════════════════════════════\n"
+"\n"
+"TÍNH NĂNG:\n"
+"\n"
+"Nhân vật\n"
+"• Mô tả, vai trò, nghề nghiệp\n"
+"• Tìm kiếm theo tên\n"
+"• Ghi chú riêng cho từng nhân vật\n"
+"• Lọc theo chương bạn đang đọc\n"
+"\n"
+"Dòng thời gian\n"
+"• Các sự kiện chính theo thứ tự\n"
+"• Nhân vật liên quan tới từng sự kiện\n"
+"\n"
+"Nhân vật lịch sử\n"
+"• Người có thật được nhắc tới trong sách\n"
+"• Tiểu sử và bối cảnh\n"
+"\n"
+"Địa điểm, chủ đề, tóm tắt\n"
+"• Đều được lọc theo tiến độ đọc\n"
+"\n"
+"Lưu trữ\n"
+"• Chỉ cần mạng cho lần phân tích đầu tiên\n"
+"• Sau đó dùng được hoàn toàn ngoại tuyến\n"
+"• Lưu riêng cho từng cuốn sách\n"
+"• Giữ được nhiều bản phân tích, chuyển qua lại tuỳ ý\n"
+"\n"
+"═══════════════════════════════\n"
+"\n"
+"BẮT ĐẦU:\n"
+"\n"
+"1. Đặt khoá API\n"
+"Menu → Grimoria → Cài đặt AI\n"
+"\n"
+"2. Phân tích\n"
+"Menu → Grimoria → Phân tích bằng AI\n"
+"(Một cuốn tiểu thuyết mất vài phút. Máy được giữ thức\n"
+"trong suốt quá trình, chạm vào màn hình để huỷ.)\n"
+"\n"
+"3. Đọc tiếp!\n"
+"Grimoria tự mở rộng theo từng chương bạn đọc qua.\n"
+"\n"
+"═══════════════════════════════\n"
+"\n"
+"MẸO:\n"
+"\n"
+"• AI viết theo đúng ngôn ngữ của cuốn sách\n"
+"• Chỉ phân tích một lần cho mỗi cuốn\n"
+"• Ghi chú được lưu riêng theo sách\n"
+"• Đổi ngôn ngữ xong nên mở lại sách\n"
+"\n"
+"═══════════════════════════════\n"
+"\n"
+"Chúc bạn đọc sách vui vẻ!"
+
+# ==============================
+# NGÔN NGỮ
+# ==============================
+
+msgid "language_title"
+msgstr "Chọn ngôn ngữ"
+
+msgid "language_english"
+msgstr "English"
+
+msgid "language_vietnamese"
+msgstr "Tiếng Việt"
+
+msgid "lang_changed_en"
+msgstr "Ngôn ngữ: English"
+
+msgid "lang_changed_vi"
+msgstr "Ngôn ngữ: Tiếng Việt"
+
+msgid "language_changed"
+msgstr "Đã đổi ngôn ngữ: Tiếng Việt"
+
+msgid "please_restart"
+msgstr "Hãy đóng sách rồi mở lại\nđể thay đổi có hiệu lực hoàn toàn."
+
+msgid "language_name"
+msgstr "Tiếng Việt"
+
+# ==============================
+# MẠNG & LỖI
+# ==============================
+
+msgid "wifi_required"
+msgstr "Cần kết nối mạng!\n\nBật Wi-Fi để phân tích bằng AI?"
+
+msgid "network_offline_prompt"
+msgstr "Cần kết nối mạng!\n\nBật Wi-Fi để phân tích bằng AI?"
+
+msgid "turn_on_wifi"
+msgstr "Bật Wi-Fi"
+
+msgid "fetch_cancelled"
+msgstr "Đã huỷ phân tích."
+
+msgid "wifi_connecting"
+msgstr "Đang kết nối Wi-Fi...\n\nVui lòng đợi."
+
+msgid "wifi_connected"
+msgstr "Kết nối thành công!\n\nĐang phân tích..."
+
+msgid "error_503"
+msgstr "Máy chủ AI đang quá tải!\n\nHãy thử lại sau vài phút, hoặc chọn một mô hình khác."
+
+msgid "error_429"
+msgstr "Quá nhiều yêu cầu!\n\nBạn đã chạm giới hạn của API.\n\nHãy đợi vài phút rồi thử lại."
+
+msgid "error_404"
+msgstr "Không tìm thấy mô hình!\n\nMô hình đã chọn không tồn tại.\n\nHãy đổi mô hình trong phần Cài đặt AI."
+
+msgid "error_400"
+msgstr "Yêu cầu không hợp lệ!\n\nKiểm tra lại khoá API hoặc thiết lập mô hình."
+
+msgid "error_info"
+msgstr "❌ Đã xảy ra lỗi!"
+
+msgid "error_no_network"
+msgstr "📡 Không có kết nối mạng!\n\nVui lòng kiểm tra Wi-Fi."
+
+msgid "error_network_timeout"
+msgstr "⏱️ Hết thời gian chờ!\n\nKiểm tra kết nối mạng rồi thử lại."
+
+msgid "error_invalid_api_key"
+msgstr "🔑 Khoá API không hợp lệ!\n\nVui lòng kiểm tra lại khoá API."
+
+msgid "error_unknown"
+msgstr "❌ Lỗi không xác định!\n\nVui lòng thử lại."
+
+msgid "error_filtered"
+msgstr "Nội dung đã bị lọc."
+
+# ==============================
+# GIÁ TRỊ MẶC ĐỊNH TỪ AI
+# ==============================
+
+msgid "ai_fallback_unnamed_character"
+msgstr "Nhân vật chưa có tên"
+
+msgid "ai_fallback_no_description"
+msgstr "Chưa có mô tả"
+
+msgid "ai_fallback_not_specified"
+msgstr "Không rõ"
+
+msgid "ai_fallback_unnamed_location"
+msgstr "Địa điểm chưa có tên"
+
+msgid "ai_fallback_unnamed_person"
+msgstr "Người chưa có tên"
+
+msgid "ai_fallback_no_biography"
+msgstr "Chưa có tiểu sử"
+
+msgid "ai_fallback_chapter"
+msgstr "Chương"
+
+msgid "ai_fallback_no_event_description"
+msgstr "Chưa có mô tả sự kiện"
+
+msgid "ai_fallback_unknown_book"
+msgstr "Sách không xác định"
+
+msgid "ai_fallback_unknown_author"
+msgstr "Tác giả không xác định"
+
+msgid "ok"
+msgstr "OK"
+
+# ==============================
+# PHẠM VI PHÂN TÍCH
+# ==============================
+
+msgid "menu_fetch_full"
+msgstr "📚 Phân tích cả cuốn sách"
+
+msgid "menu_fetch_progress"
+msgstr "📖 Chỉ tới trang đang đọc (không lộ nội dung)"
+
+msgid "progress_warning_low"
+msgstr "📖 Bạn mới đọc được %%%d\n\nVẫn tiếp tục?"
+
+msgid "progress_error"
+msgstr "⚠️ Không đọc được tiến độ!\n\nPhân tích cả cuốn thay thế?"
+
+msgid "spoiler_preference_title"
+msgstr "Phạm vi hiển thị"
+
+msgid "spoiler_free_option"
+msgstr "🔒 Không lộ nội dung (tới %%%d cuốn sách)"
+
+msgid "full_book_option"
+msgstr "📖 Toàn bộ cuốn sách"
+
+msgid "spoiler_free_mode"
+msgstr "🔒 Không lộ nội dung: %%%d"
+
+msgid "full_book_mode_active"
+msgstr "📖 Toàn bộ cuốn sách"
+
+# ==============================
+# PHÂN TÍCH CẢ CUỐN
+# ==============================
+
+msgid "confirm_full_fetch"
+msgstr "Phân tích cả cuốn sách?\n\n📖 %d chương\n📊 khoảng %dk token\n⏱️ vài phút — sách dài có thể tới ~20 phút\n\nMáy được giữ thức trong suốt quá trình, và bạn có thể chạm để huỷ bất cứ lúc nào.\n\nChỉ chạy một lần duy nhất. Càng đọc tiếp, Grimoria càng mở ra thêm theo từng chương mà không cần gọi AI nữa."
+
+msgid "confirm_analyze"
+msgstr "Phân tích"
+
+msgid "confirm_extra_analysis"
+msgstr "Sách này đã có %d bản phân tích được lưu.\nBản cũ vẫn được giữ — bạn có thể chuyển lại sau."
+
+msgid "stage_extracting"
+msgstr "📖 Đang đọc nội dung sách từ thiết bị..."
+
+msgid "stage_sending"
+msgstr "📤 Đang gửi %d chương (~%dk token)..."
+
+msgid "stage_waiting"
+msgstr "🤖 %s đang phân tích.\nQuá trình này mất vài phút."
+
+msgid "stage_waiting_trap"
+msgstr "🤖 %s đang phân tích — chạm vào đâu cũng được để huỷ"
+
+msgid "fetch_cancel_confirm"
+msgstr "Quá trình phân tích vẫn đang chạy.\n\nHuỷ bây giờ? Mọi kết quả sẽ mất, và số token đã dùng vẫn bị tính phí."
+
+msgid "fetch_cancel_yes"
+msgstr "Huỷ phân tích"
+
+msgid "fetch_cancel_no"
+msgstr "Tiếp tục đợi"
+
+msgid "extract_failed_warning"
+msgstr "⚠️ Không đọc được nội dung sách.\nSẽ chỉ phân tích dựa trên tên sách, kém chính xác hơn nhiều."
+
+# ==============================
+# BỘ LỌC THEO CHƯƠNG
+# ==============================
+
+msgid "showing_up_to_chapter"
+msgstr "🔒 Đang hiện tới chương %d (không lộ nội dung)"
+
+msgid "showing_whole_book"
+msgstr "🔓 Đang hiện cả cuốn sách (có thể lộ nội dung)"
+
+msgid "menu_update_grimoria"
+msgstr "🔄 Phân tích lại cuốn này"
+
+msgid "menu_toggle_scope"
+msgstr "🔒 Bật/tắt bộ lọc lộ nội dung"
+
+# ==============================
+# CÁC BẢN PHÂN TÍCH
+# ==============================
+
+msgid "menu_versions"
+msgstr "📚 Các bản phân tích"
+
+msgid "versions_title"
+msgstr "Các bản phân tích"
+
+msgid "versions_hint"
+msgstr "Chạm để chuyển — giữ để đổi tên hoặc xoá"
+
+msgid "no_versions"
+msgstr "Sách này chưa có bản phân tích nào."
+
+msgid "version_switched"
+msgstr "Đang hiện: %s"
+
+msgid "version_rename"
+msgstr "Đổi tên"
+
+msgid "version_rename_desc"
+msgstr "Đặt một cái tên dễ nhớ, ví dụ tên mô hình đã tạo ra nó."
+
+msgid "version_delete"
+msgstr "Xoá"
+
+msgid "version_delete_confirm"
+msgstr "Xoá bản phân tích này? Các bản khác vẫn được giữ."
+
+msgid "unknown_model_version"
+msgstr "mô hình không rõ"

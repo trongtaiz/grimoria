@@ -1,0 +1,782 @@
+# English translation
+# This file is distributed under the same license as the package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Grimoria 1.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-17 12:00+0000\n"
+"PO-Revision-Date: 2025-11-17 12:00+0000\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ==============================
+# MENU ITEMS
+# ==============================
+
+msgid "menu_grimoria"
+msgstr "Grimoria"
+
+msgid "menu_characters"
+msgstr "Characters"
+
+msgid "menu_chapter_characters"
+msgstr "Characters in this Chapter"
+
+msgid "menu_character_notes"
+msgstr "My Character Notes"
+
+msgid "menu_timeline"
+msgstr "Timeline"
+
+msgid "menu_historical_figures"
+msgstr "Historical Figures"
+
+msgid "menu_locations"
+msgstr "Locations"
+
+msgid "menu_author_info"
+msgstr "Author Info"
+
+msgid "menu_summary"
+msgstr "Summary"
+
+msgid "menu_themes"
+msgstr "Themes"
+
+msgid "menu_fetch_ai"
+msgstr "Analyze with AI"
+
+msgid "menu_ai_settings"
+msgstr "AI Settings"
+
+msgid "menu_clear_cache"
+msgstr "Clear Cache"
+
+msgid "menu_grimoria_mode"
+msgstr "Reader Mode:"
+
+msgid "menu_language"
+msgstr "Language"
+
+msgid "menu_about"
+msgstr "About"
+
+# ==============================
+# AI SETTINGS & PROVIDERS
+# ==============================
+
+msgid "menu_gemini_key"
+msgstr "Google Gemini API Key"
+
+msgid "menu_gemini_model"
+msgstr "Select Gemini Model"
+
+msgid "menu_chatgpt_key"
+msgstr "ChatGPT API Key"
+
+msgid "menu_provider_select"
+msgstr "Select AI Provider"
+
+msgid "gemini_model_title"
+msgstr "Select Gemini Model"
+
+msgid "gemini_model_flash"
+msgstr "Fastest"
+
+msgid "gemini_model_pro"
+msgstr "Balanced, more capable"
+
+msgid "gemini_model_flash_15"
+msgstr "Fast and economical"
+
+msgid "unknown_model"
+msgstr "Unknown model."
+
+msgid "model_selected"
+msgstr "Model selected"
+
+msgid "gemini_model_flash_info"
+msgstr "Model: Gemini Flash\n\nStrengths:\n• Fastest responses\n• Lowest cost"
+
+msgid "gemini_model_pro_info"
+msgstr "Model: Gemini Pro\n\nStrengths:\n• Higher quality\n• Better on complex analysis"
+
+msgid "gemini_model_3_pro_info"
+msgstr "Model: Gemini Pro\n\nThe most capable model available."
+
+# ==============================
+# STATUS MESSAGES
+# ==============================
+
+msgid "grimoria_mode_active"
+msgstr "Active"
+
+msgid "grimoria_mode_inactive"
+msgstr "Inactive"
+
+msgid "events"
+msgstr "events"
+
+# ==============================
+# INFO MESSAGES
+# ==============================
+
+msgid "no_character_data"
+msgstr "No character data yet. Please run 'Analyze with AI' first."
+
+msgid "no_char_data_fetch"
+msgstr "No character info yet.\n\nPlease run the analysis first."
+
+msgid "no_location_data"
+msgstr "No location data yet. Please run 'Analyze with AI' first."
+
+msgid "no_author_data"
+msgstr "No author info yet. Please run 'Analyze with AI' first."
+
+msgid "no_summary_data"
+msgstr "No summary data yet. Please run 'Analyze with AI' first."
+
+msgid "no_theme_data"
+msgstr "No theme data yet. Please run 'Analyze with AI' first."
+
+msgid "no_timeline_data"
+msgstr "No timeline data yet.\n\nPlease run 'Analyze with AI' first.\n\nAI will show key events in\nchronological order."
+
+msgid "no_historical_data"
+msgstr "No historical figure data yet.\n\nPlease run 'Analyze with AI' first.\n\nAI will detect real historical\nfigures mentioned in the book."
+
+# ==============================
+# AUTO-LOAD & CACHE
+# ==============================
+
+msgid "grimoria_ready"
+msgstr "Grimoria ready and active!"
+
+msgid "characters_loaded"
+msgstr "characters"
+
+msgid "locations_loaded"
+msgstr "locations"
+
+msgid "themes_loaded"
+msgstr "themes"
+
+msgid "no_cache_found"
+msgstr "Cache not found"
+
+msgid "checking_cache"
+msgstr "Loaded from cache!"
+
+msgid "cache_verify"
+msgstr "Data already exists for this book.\nIf you want to re-fetch, you must clear it first.\n\nPath: Menu → Grimoria → Clear Cache"
+
+msgid "cache_saved"
+msgstr "💾 Saved to cache!"
+
+msgid "cache_save_failed"
+msgstr "❌ Failed to save cache"
+
+msgid "cache_clear_confirm"
+msgstr "Clear Cache Confirmation\n\nIf you clear the cache:\n\n• All character info will be deleted\n• Timeline will be deleted\n• Historical figures will be deleted\n• Location and theme info will be deleted\n• Author info will be deleted\n\nYou will need to fetch data from AI again.\n\nAre you sure you want to clear the cache?"
+
+msgid "yes_clear"
+msgstr "Yes, Clear"
+
+msgid "cancel"
+msgstr "Cancel"
+
+msgid "cache_cleared"
+msgstr "Cache cleared!\n\nYou can now fetch new data:\nMenu → Grimoria → Analyze with AI"
+
+msgid "cache_not_found"
+msgstr "Cache not found or could not be cleared"
+
+# ==============================
+# CHARACTER DETAILS
+# ==============================
+
+msgid "character_name"
+msgstr "Character:"
+
+msgid "description"
+msgstr "Description:"
+
+msgid "role"
+msgstr "Role:"
+
+msgid "gender"
+msgstr "Gender:"
+
+msgid "occupation"
+msgstr "Occupation:"
+
+msgid "not_specified"
+msgstr "Not specified"
+
+msgid "no_description"
+msgstr "No description"
+
+msgid "unnamed_character"
+msgstr "Unnamed Character"
+
+msgid "unknown_character"
+msgstr "Unknown Character"
+
+msgid "gender_male"
+msgstr "Male"
+
+msgid "gender_female"
+msgstr "Female"
+
+# ==============================
+# AI FETCH & STATUS
+# ==============================
+
+msgid "book_title"
+msgstr "Book:"
+
+msgid "characters_count"
+msgstr "Characters:"
+
+msgid "locations_count"
+msgstr "Locations:"
+
+msgid "themes_count"
+msgstr "Themes:"
+
+msgid "events_count"
+msgstr "Events:"
+
+msgid "historical_count"
+msgstr "Historical Figures:"
+
+msgid "cache_age"
+msgstr "Cache age:"
+
+msgid "days_old"
+msgstr "days"
+
+msgid "unlimited_valid"
+msgstr "Valid indefinitely!"
+
+msgid "fetch_new_data"
+msgstr "To fetch new data:\nMenu → Grimoria → Clear Cache"
+
+msgid "no_api_key"
+msgstr "AI API Key not set!\n\nEnter API key in:\nMenu → Grimoria → AI Settings"
+
+msgid "fetching_ai"
+msgstr "🤖 Fetching from %s..."
+
+msgid "fetching_model"
+msgstr "Model: "
+
+msgid "fetching_wait"
+msgstr "⏳ Please wait...\nA whole book takes several minutes."
+
+msgid "dont_touch"
+msgstr "Do not touch the screen."
+
+msgid "ai_fetch_failed"
+msgstr "Failed to fetch data from AI!\n\nPossible reasons:\n• Invalid API key\n• No internet connection\n• API limit exceeded"
+
+msgid "ai_fetch_complete"
+msgstr "✅ Analyzed with %s\n\n📖 %s\n👤 %s\n\n👥 %d | 📍 %d | 🎨 %d | 📅 %d | 📜 %d\n\n%s"
+
+# ==============================
+# GRIMORIA MODE & SEARCH
+# ==============================
+
+msgid "grimoria_mode_no_data"
+msgstr "Fetch data first for Reader Mode!\n\nMenu → Grimoria → Analyze with AI"
+
+msgid "grimoria_mode_enabled"
+msgstr "Reader Mode Active!\n\nNote: Text selection feature\nis currently disabled.\n\nTo search characters:\nMenu → Grimoria → Characters → Search"
+
+msgid "grimoria_mode_disabled"
+msgstr "Reader Mode Disabled"
+
+msgid "search_character"
+msgstr "Search Character..."
+
+msgid "search_character_title"
+msgstr "Search Character"
+
+msgid "search_hint"
+msgstr "Type name (e.g. Stavrogin)"
+
+msgid "search_button"
+msgstr "Search"
+
+msgid "character_not_found"
+msgstr "Character not found: %s\n\nHint: Type part of the name"
+
+# ==============================
+# TIMELINE & CHAPTER
+# ==============================
+
+msgid "timeline_event"
+msgstr "Event #%d"
+
+msgid "chapter"
+msgstr "Chapter:"
+
+msgid "characters_involved"
+msgstr "Characters:"
+
+msgid "importance"
+msgstr "Importance:"
+
+msgid "analyzing_chapter"
+msgstr "Analyzing chapter...\n\nPlease wait"
+
+msgid "chapter_text_error"
+msgstr "Could not retrieve chapter text"
+
+msgid "no_characters_in_chapter"
+msgstr "No characters found in this chapter.\n\nChapter: %s"
+
+msgid "this_chapter"
+msgstr "This Chapter"
+
+msgid "chapter_chars_title"
+msgstr "Character"
+
+# ==============================
+# CHARACTER NOTES
+# ==============================
+
+msgid "character_notes_title"
+msgstr "Character Notes (%d notes)"
+
+msgid "add_note"
+msgstr "Add note"
+
+msgid "note_saved"
+msgstr "Note saved!\n\n%s"
+
+msgid "note_deleted"
+msgstr "Note deleted!\n\n%s"
+
+msgid "add_note_title"
+msgstr "Add note for %s"
+
+msgid "note_hint"
+msgstr "Your note about the character..."
+
+msgid "save"
+msgstr "Save"
+
+msgid "delete"
+msgstr "Delete"
+
+# ==============================
+# QUICK MENU
+# ==============================
+
+msgid "quick_menu_title"
+msgstr "Grimoria Quick Access"
+
+msgid "fetch_data"
+msgstr "Analyze with AI"
+
+# ==============================
+# API KEYS
+# ==============================
+
+msgid "gemini_key_title"
+msgstr "Google Gemini API Key"
+
+msgid "gemini_key_hint"
+msgstr "API key"
+
+msgid "gemini_key_desc"
+msgstr "Free API key:\nhttps://makersuite.google.com/app/apikey\n\nOr edit config.lua:\ngemini_api_key = \"AIzaSy...\""
+
+msgid "testing_key"
+msgstr "Testing API key..."
+
+msgid "gemini_key_saved"
+msgstr "Gemini API Key saved!"
+
+msgid "key_test_failed"
+msgstr "API Key saved but test failed!\n\nError: %s\n\nPlease check your API key."
+
+msgid "chatgpt_key_title"
+msgstr "ChatGPT API Key"
+
+msgid "chatgpt_key_hint"
+msgstr "sk-..."
+
+msgid "chatgpt_key_desc"
+msgstr "API key:\nhttps://platform.openai.com/api-keys\n\nOr edit config.lua:\nchatgpt_api_key = \"sk-...\""
+
+msgid "chatgpt_key_saved"
+msgstr "ChatGPT API Key saved!"
+
+# ==============================
+# PROVIDER SELECTION
+# ==============================
+
+msgid "provider_select_title"
+msgstr "Select AI Provider"
+
+msgid "gemini_selected"
+msgstr "Google Gemini selected"
+
+msgid "chatgpt_selected"
+msgstr "ChatGPT selected"
+
+msgid "set_key_first"
+msgstr "Set API key first"
+
+msgid "provider_active"
+msgstr "Active"
+
+msgid "provider_selected"
+msgstr "%s selected"
+
+msgid "provider_no_key"
+msgstr "No API key"
+
+msgid "yes"
+msgstr "YES"
+
+msgid "no"
+msgstr "NO"
+
+# ==============================
+# EXTRA TITLES
+# ==============================
+
+msgid "summary_title"
+msgstr "Book Summary"
+
+msgid "themes_title"
+msgstr "Book Themes"
+
+msgid "hist_bio"
+msgstr "Biography"
+
+msgid "hist_importance"
+msgstr "Importance in Book"
+
+msgid "hist_context"
+msgstr "Context in Book"
+
+# ==============================
+# ABOUT
+# ==============================
+
+msgid "about_title"
+msgstr "Grimoria"
+
+msgid "about_text"
+msgstr ""
+"Grimoria for KOReader\n"
+"═══════════════════════════════\n"
+"\n"
+"WHAT IT DOES\n"
+"Sends the actual text of the book you are reading to an AI, once,\n"
+"and builds a reference index from it: characters, locations,\n"
+"themes, a timeline, and any real historical figures mentioned.\n"
+"\n"
+"WHAT MAKES IT DIFFERENT\n"
+"Every entry is tagged with the chapter it belongs to. Anything you\n"
+"have not read yet is hidden on the device itself — no second\n"
+"request, no extra cost. The index opens up as you read.\n"
+"\n"
+"That includes hidden identities: if a character appears under two\n"
+"names, the two cards stay unconnected until the chapter where the\n"
+"book itself connects them.\n"
+"\n"
+"═══════════════════════════════\n"
+"\n"
+"FEATURES:\n"
+"\n"
+"Characters\n"
+"• Description, role, occupation\n"
+"• Search by name\n"
+"• Your own notes, per character\n"
+"• Filtered to the chapter you have reached\n"
+"\n"
+"Timeline\n"
+"• Key events in order\n"
+"• Who was involved in each\n"
+"\n"
+"Historical figures\n"
+"• Real people mentioned in the book\n"
+"• Biography and context\n"
+"\n"
+"Locations, themes, summary\n"
+"• All filtered by reading progress\n"
+"\n"
+"Storage\n"
+"• Internet needed only for the first analysis\n"
+"• Fully offline afterwards\n"
+"• Stored per book\n"
+"• Keeps several analyses, switch between them freely\n"
+"\n"
+"═══════════════════════════════\n"
+"\n"
+"GETTING STARTED:\n"
+"\n"
+"1. Set an API key\n"
+"Menu → Grimoria → AI Settings\n"
+"\n"
+"2. Analyse\n"
+"Menu → Grimoria → Analyze with AI\n"
+"(A novel takes a few minutes. The device is kept awake\n"
+"throughout, and you can tap the screen to cancel.)\n"
+"\n"
+"3. Read on!\n"
+"The Grimoria expands by itself, chapter by chapter.\n"
+"\n"
+"═══════════════════════════════\n"
+"\n"
+"TIPS:\n"
+"\n"
+"• The AI writes in the language of the book itself\n"
+"• Each book is analysed once\n"
+"• Notes are saved per book\n"
+"• After changing language, reopen the book\n"
+"\n"
+"═══════════════════════════════\n"
+"\n"
+"Happy reading!"
+
+# ==============================
+# LANGUAGE SELECTION
+# ==============================
+
+msgid "language_title"
+msgstr "Select Language"
+
+msgid "language_english"
+msgstr "English"
+
+msgid "language_vietnamese"
+msgstr "Tiếng Việt"
+
+msgid "lang_changed_en"
+msgstr "Language: English"
+
+msgid "lang_changed_vi"
+msgstr "Language: Vietnamese"
+
+msgid "language_changed"
+msgstr "Language changed: English"
+
+msgid "please_restart"
+msgstr "Please close the book and reopen it\nfor changes to take full effect."
+
+# ==============================
+# PRESERVED FROM ORIGINAL PO (MISSING IN LUA)
+# ==============================
+
+msgid "language_name"
+msgstr "English"
+
+msgid "wifi_required"
+msgstr "Internet connection required!\n\nDo you want to turn on Wi-Fi to fetch AI data?"
+
+msgid "network_offline_prompt"
+msgstr "Internet connection required!\n\nDo you want to turn on Wi-Fi to fetch AI data?"
+
+msgid "turn_on_wifi"
+msgstr "Turn on Wi-Fi"
+
+msgid "fetch_cancelled"
+msgstr "The fetch has been cancelled."
+
+msgid "wifi_connecting"
+msgstr "Connecting to Wi-Fi...\n\nPlease wait."
+
+msgid "wifi_connected"
+msgstr "Connection successful!\n\nFetching AI data..."
+
+msgid "error_503"
+msgstr "Gemini API is overloaded!\n\nThe model is currently receiving too many requests.\n\nPlease try again in a few minutes.\n\nTip: Try a different model in config.lua:\ngemini_model = 'gemini-2.0-flash-exp'"
+
+msgid "error_429"
+msgstr "Too many requests!\n\nYou have reached the API rate limit.\n\nPlease wait a few minutes and try again."
+
+msgid "error_404"
+msgstr "Model not found!\n\nThe selected model does not exist.\n\nChange the model in config.lua:\ngemini_model = 'gemini-2.5-flash'"
+
+msgid "error_400"
+msgstr "Bad request!\n\nCheck your API key or model settings."
+
+msgid "ai_fallback_unnamed_character"
+msgstr "Unnamed Character"
+
+msgid "ai_fallback_no_description"
+msgstr "No description"
+
+msgid "ai_fallback_not_specified"
+msgstr "Not specified"
+
+msgid "ai_fallback_unnamed_location"
+msgstr "Unnamed Location"
+
+msgid "ai_fallback_unnamed_person"
+msgstr "Unnamed Person"
+
+msgid "ai_fallback_no_biography"
+msgstr "No biography"
+
+msgid "ai_fallback_chapter"
+msgstr "Chapter"
+
+msgid "ai_fallback_no_event_description"
+msgstr "No event description"
+
+msgid "ai_fallback_unknown_book"
+msgstr "Unknown Book"
+
+msgid "ai_fallback_unknown_author"
+msgstr "Unknown Author"
+
+msgid "ok"
+msgstr "OK"
+
+msgid "menu_fetch_full"
+msgstr "📚 Analyze with AI (Full Book)"
+
+msgid "menu_fetch_progress"
+msgstr "📖 Up to Current Page (SPOILER-free)"
+
+msgid "progress_warning_low"
+msgstr "📖 You haven't progressed much yet (%%%d)\n\nContinue anyway?"
+
+msgid "progress_error"
+msgstr "⚠️ Could not get reading progress!\n\nAnalyze full book instead?"
+
+msgid "error_info"
+msgstr "❌ Error Occurred!"
+
+msgid "error_no_network"
+msgstr "📡 No internet connection!\n\nPlease check your Wi-Fi connection."
+
+msgid "error_network_timeout"
+msgstr "⏱️ Connection timed out!\n\nCheck your internet connection and try again."
+
+msgid "error_invalid_api_key"
+msgstr "🔑 Invalid API key!\n\nPlease check your API key."
+
+msgid "error_unknown"
+msgstr "❌ Unknown error!\n\nPlease try again."
+
+msgid "error_filtered"
+msgstr "Content was filtered."
+
+msgid "spoiler_preference_title"
+msgstr "Spoiler Preference"
+
+msgid "spoiler_free_option"
+msgstr "🔒 Spoiler-free Mode (Up to %%%d of the book's)"
+
+msgid "full_book_option"
+msgstr "📖 Full Mode"
+
+msgid "spoiler_free_mode"
+msgstr "🔒 Spoiler-free Mode: %%%d"
+
+msgid "full_book_mode_active"
+msgstr "📖 Full Mode"
+
+# ==============================
+# WHOLE-BOOK ANALYSIS
+# ==============================
+# These were English-only fallbacks inside i18n.lua until
+# Vietnamese was added. They live here now so the .po files are the single
+# source of interface text; the Lua fallbacks stay as a safety net for a
+# translation that has not caught up yet.
+
+msgid "confirm_full_fetch"
+msgstr "Analyse the whole book?\n\n📖 %d chapters\n📊 roughly %dk tokens\n⏱️ several minutes -- up to ~20 on a long book\n\nThe device is kept awake while it runs, and you can tap to cancel at any point.\n\nThis runs once. As you read on, the Grimoria reveals itself chapter by chapter with no further requests."
+
+msgid "confirm_analyze"
+msgstr "Analyse"
+
+msgid "confirm_extra_analysis"
+msgstr "You already have %d stored analysis for this book.\nIt is kept - you can switch back afterwards."
+
+msgid "stage_extracting"
+msgstr "📖 Reading the book from the device..."
+
+msgid "stage_sending"
+msgstr "📤 Sending %d chapters (~%dk tokens)..."
+
+msgid "stage_waiting"
+msgstr "🤖 %s is analysing.\nThis takes several minutes."
+
+msgid "stage_waiting_trap"
+msgstr "🤖 %s is analysing — tap anywhere to cancel"
+
+msgid "fetch_cancel_confirm"
+msgstr "The analysis is still running.\n\nCancel it? Everything done so far is lost, and tokens already used are still charged."
+
+msgid "fetch_cancel_yes"
+msgstr "Cancel analysis"
+
+msgid "fetch_cancel_no"
+msgstr "Keep waiting"
+
+msgid "extract_failed_warning"
+msgstr "⚠️ Could not read the book's text.\nFalling back to title-only analysis, which is much less reliable."
+
+# ==============================
+# CHAPTER FILTER
+# ==============================
+
+msgid "showing_up_to_chapter"
+msgstr "🔒 Showing up to chapter %d (spoiler-safe)"
+
+msgid "showing_whole_book"
+msgstr "🔓 Showing the whole book (spoilers included)"
+
+msgid "menu_update_grimoria"
+msgstr "🔄 Re-analyse this book"
+
+msgid "menu_toggle_scope"
+msgstr "🔒 Spoiler filter on/off"
+
+# ==============================
+# STORED ANALYSES
+# ==============================
+
+msgid "menu_versions"
+msgstr "📚 Analysis versions"
+
+msgid "versions_title"
+msgstr "Analysis versions"
+
+msgid "versions_hint"
+msgstr "Tap to switch - hold to rename or delete"
+
+msgid "no_versions"
+msgstr "No analysis stored for this book yet."
+
+msgid "version_switched"
+msgstr "Now showing: %s"
+
+msgid "version_rename"
+msgstr "Rename"
+
+msgid "version_rename_desc"
+msgstr "A name you will recognise, e.g. the model that produced it."
+
+msgid "version_delete"
+msgstr "Delete"
+
+msgid "version_delete_confirm"
+msgstr "Delete this analysis? The others are kept."
+
+msgid "unknown_model_version"
+msgstr "unknown model"

@@ -1,0 +1,13 @@
+# LF everywhere, on every platform.
+#
+# Not a style preference. The plugin folder is copied verbatim onto an e-reader,
+# and the .po parser in lib/i18n.lua reads translations with file:lines(), which
+# on a device strips \n but leaves a trailing \r on a CRLF file -- putting an
+# invisible carriage return on the end of every translated string. A checkout on
+# Windows would produce exactly that, so the line ending is pinned here rather
+# than left to core.autocrlf.
+* text=auto eol=lf
+
+# Keep the EPUB fixture and any packaged copy byte-exact if one is ever tracked.
+*.epub binary
+*.zip binary

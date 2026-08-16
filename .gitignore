@@ -1,0 +1,56 @@
+# ---------------------------------------------------------------------------
+# Never publish
+# ---------------------------------------------------------------------------
+# private/ is the local-only material: live API keys, a mirror of a device's
+# settings/grimoria/ directory, the copyrighted test fixture and everything
+# derived from it. It is kept in the tree because that is where the test
+# harness needs it, so THIS ENTRY is the only thing keeping it unpublished.
+# Never `git add -f` anything under it.
+#
+# A .gitignore added after a commit removes nothing from history, so this may
+# never be committed even once.
+private/
+backup-fixtures/
+
+# Belt and braces -- the same things by name, in case they are ever recreated
+# somewhere other than private/.
+*_api_key.txt
+settings/grimoria/
+*.epub
+book_text.txt
+prompt.txt
+prompt.txt.system
+reply*.json
+reply*.lua
+run_*.log
+
+# Analyses the plugin writes into a book's .sdr sidecar. Real ones are derived
+# from real books; none of them belong in the repository.
+grimoria_cache*.lua
+grimoria_versions.lua
+grimoria_notes.lua
+
+# ---------------------------------------------------------------------------
+# Internal working notes -- not for a public repo
+# ---------------------------------------------------------------------------
+# PUBLISHING.md records that keys are pending rotation, that the test fixture
+# came from a piracy site, and the whole provenance analysis. Published, it
+# hands a reader the project's weak points and reads as an admission.
+#
+# CLAUDE.md has the same problem in passing (it describes private/ and calls
+# the keys known-leaked). It is otherwise the best architecture document here,
+# so it is worth sanitising and committing later -- but not as it stands.
+PUBLISHING.md
+CLAUDE.md
+
+# ---------------------------------------------------------------------------
+# Build output, editor and OS junk
+# ---------------------------------------------------------------------------
+# The plugin folder is the deliverable; any packaged copy of it is rebuildable.
+*.zip
+*.zipp
+*.stackdump
+*.swp
+*~
+.DS_Store
+Thumbs.db

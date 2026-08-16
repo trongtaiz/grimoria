@@ -176,6 +176,7 @@ function GrimoriaPlugin:setChatGPTAPIKey()
     input_dialog:onShowKeyboard()
 end
 
+-- Make sure the LLM module is loaded, and hand it back.
 function GrimoriaPlugin:getLLM()
     if not self.llm then
         local LLM = require("lib/llm")
@@ -190,6 +191,9 @@ function GrimoriaPlugin:getProviderModel(provider)
     return cfg and cfg.model or nil
 end
 
+-- Unset and "none" are the same wire behaviour -- no reasoning field, provider
+-- default thinking -- so they read back as one state. Not called "off": the
+-- endpoint refuses to switch thinking off at all.
 function GrimoriaPlugin:getProviderEffort(provider)
     local cfg = self:getLLM().providers[provider]
     local e = cfg and cfg.reasoning_effort
@@ -197,6 +201,14 @@ function GrimoriaPlugin:getProviderEffort(provider)
     return e
 end
 
+--[[
+Edit one field of one OpenAI-compatible provider.
+
+One dialog per field rather than a combined one: the endpoint and model are
+set once and then never touched, while the key is what people actually come
+back to. Each writes through to settings/grimoria/<provider>_<field>.txt so it
+survives a plugin re-copy.
+]]
 function GrimoriaPlugin:setProviderField(provider, field, title, description, on_saved)
     local InputDialog = require("ui/widget/inputdialog")
 
@@ -248,10 +260,20 @@ function GrimoriaPlugin:setProviderField(provider, field, title, description, on
     input_dialog:onShowKeyboard()
 end
 
+-- Kept as the name the Custom AI menu entries already call.
 function GrimoriaPlugin:setCustomField(field, title, description)
     return self:setProviderField("custom", field, title, description)
 end
 
+--[[
+Pick an OpenRouter model.
+
+A shortlist plus a free-text entry, because OpenRouter carries 400+ models and
+new ones appear weekly -- a fixed list would be wrong within a month, and
+typing a full slug on an e-ink keyboard is miserable. The shortlist is only
+what is worth running a whole book through: long input, cheap enough to redo,
+and reliable at emitting JSON.
+]]
 function GrimoriaPlugin:selectOpenRouterModel(touchmenu_instance)
     local ButtonDialog = require("ui/widget/buttondialog")
     local helper = self:getLLM()
@@ -302,6 +324,20 @@ function GrimoriaPlugin:selectOpenRouterModel(touchmenu_instance)
     UIManager:show(dialog)
 end
 
+--[[
+How hard the model should think before it answers.
+
+A picker rather than the free-text box the custom provider uses, because here
+the value is worth getting right and a typo is expensive: an endpoint that
+validates the field rejects the whole request, and one that doesn't silently
+ignores it, so a misspelling either wastes a fetch or quietly turns thinking
+off while the menu claims it is on.
+
+The wording puts the trade-off on the buttons. Every level above "off" is
+billed as output tokens on top of the answer, and the levels share the output
+budget with the answer itself -- which is why a whole-book fetch that gets cut
+off steps this down before it starts trimming the result.
+]]
 function GrimoriaPlugin:selectReasoningEffort(provider, touchmenu_instance)
     local ButtonDialog = require("ui/widget/buttondialog")
     local helper = self:getLLM()

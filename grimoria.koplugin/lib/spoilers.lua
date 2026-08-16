@@ -17,6 +17,18 @@ local Screen = require("device").screen
 
 local GrimoriaPlugin = {}
 
+--[[
+Fuse identities that the text has already connected.
+
+Books hide people behind aliases and anonymous scenes, so the analysis lists
+one entry per TEXTUAL IDENTITY (the mystery man / Van / Morisu are three
+characters). Each identity_merges entry names the chapter where the text
+itself makes the connection; from that chapter on, the member entries become
+one fused card. Before it, they stay unrelated -- that separation IS the
+spoiler protection.
+
+limit == nil means "the whole book": every merge applies.
+]]
 local function fuseCharacters(data, limit)
     local chars = data.characters or {}
     local applies = {}   -- identity name -> merge entry
@@ -166,6 +178,7 @@ function GrimoriaPlugin:applyChapterFilter()
     self.historical_figures = data.historical_figures or {}
 end
 
+-- Toggle between "up to where I am" and the complete analysis.
 function GrimoriaPlugin:toggleWholeBookView()
     self.show_whole_book = not self.show_whole_book
     self:applyChapterFilter()

@@ -8,6 +8,7 @@ stub("socket.http", {}); stub("ssl.https", {}); stub("ltn12", {}); stub("json", 
 stub("gettext", setmetatable({}, { __call = function(_, s) return s end }))
 stub("ui/uimanager", { show = function() end, close = function() end })
 stub("ui/widget/infomessage", { new = function(_, o) return o end })
+stub("ui/widget/confirmbox", { new = function(_, o) return o end })
 stub("ui/widget/menu", { new = function(_, o) return o end })
 stub("device", { screen = { getWidth = function() return 600 end,
                             getHeight = function() return 800 end } })

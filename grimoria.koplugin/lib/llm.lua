@@ -446,6 +446,8 @@ function LLM:loadConfig()
             self.providers.custom.reasoning_effort = config.custom_reasoning_effort
         end
         if config.default_provider then self.default_provider = config.default_provider end
+        -- config.settings was a block of toggles nothing ever read. Still
+        -- accepted so an old config.lua does not break, but it goes nowhere.
         if config.settings then self.settings = config.settings end
     end
 end

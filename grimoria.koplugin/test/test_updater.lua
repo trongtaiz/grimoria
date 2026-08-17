@@ -305,6 +305,88 @@ do
     plugin.updaterFetchManifest = saved_get
 end
 
+-- ------------------------------------------------------ transient errors ----
+
+--[[
+A busy server must not end the update, and a missing file must not be waited on.
+
+This is a regression test for a reported failure: installing 3.2.0 died with
+"HTTP 503". Measured against the live repository afterwards, a burst of the
+manifest's two dozen files draws a 503 for roughly one request in a hundred, on
+no particular file, and the same URL succeeds a second later --
+raw.githubusercontent.com declining a rapid series of requests from one address.
+With no retry, one blip anywhere in the run aborted everything.
+
+The other half matters just as much. raw.githubusercontent.com answers a private
+repository with 404, exactly as it answers a genuinely missing file, and neither
+gets better by asking again -- so a 404 must fail on the first attempt rather
+than making the user wait through four backoffs for the same answer.
+]]
+print("\n=== a busy server is retried; a missing file is not ===")
+do
+    local waits = {}
+    -- The real pause() calls socket.sleep. Recorded rather than performed, or
+    -- this suite would spend fifteen seconds asleep proving it can wait.
+    stub("socket", { sleep = function(n) waits[#waits + 1] = n end })
+
+    package.loaded["json"].decode = function()
+        return { contract = 1, files = { { path = "main.lua", size = 5 } } }
+    end
+
+    local attempts
+    local function transport(plan)
+        attempts = 0
+        package.loaded["ssl.https"].request = function(t)
+            attempts = attempts + 1
+            local step = plan[math.min(attempts, #plan)]
+            if step == "drop" then return nil, "connection reset" end
+            if step == 200 then
+                t.sink("{}")
+                return 1, 200, {}
+            end
+            return 1, step, {}
+        end
+    end
+
+    -- 1. two 503s, then the file arrives.
+    waits = {}
+    transport({ 503, 503, 200 })
+    local m = plugin:updaterFetchManifest({ repo = "a/b", tag = "v2", local_version = "1.0.0" })
+    check(m ~= nil, "a 503 followed by success still yields the manifest")
+    check(attempts == 3, "it took exactly three attempts (took " .. attempts .. ")")
+    check(#waits == 2 and waits[1] == 1 and waits[2] == 2,
+          "backoff is 1s then 2s, not a tight loop (" ..
+          table.concat(waits, ",") .. ")")
+
+    -- 2. a server that stays down is reported, with the attempts named.
+    waits = {}
+    transport({ 503 })
+    local m2, err2 = plugin:updaterFetchManifest({ repo = "a/b", tag = "v2", local_version = "1.0.0" })
+    check(m2 == nil, "a server that never recovers does fail")
+    check(attempts == 5, "after five attempts (took " .. attempts .. ")")
+    check(type(err2) == "string" and err2:find("503", 1, true) ~= nil,
+          "and the message still names the code (" .. tostring(err2) .. ")")
+
+    -- 3. a dropped connection counts as transient too -- the most ordinary
+    --    thing that can happen to a Kindle halfway through a download.
+    transport({ "drop", "drop", 200 })
+    check(plugin:updaterFetchManifest({ repo = "a/b", tag = "v2", local_version = "1.0.0" }) ~= nil,
+          "a dropped connection is retried, not fatal")
+
+    -- 4. 404 is an answer, not a delay. This is the private-repository case.
+    waits = {}
+    transport({ 404 })
+    local m4, err4 = plugin:updaterFetchManifest({ repo = "a/b", tag = "v2", local_version = "1.0.0" })
+    check(m4 == nil, "a 404 fails")
+    check(attempts == 1, "on the FIRST attempt -- no waiting for a file that is "
+          .. "not there (took " .. attempts .. ")")
+    check(#waits == 0, "and without sleeping at all")
+    check(type(err4) == "string" and err4:find("404", 1, true) ~= nil,
+          "naming the code (" .. tostring(err4) .. ")")
+
+    package.loaded["socket"] = nil
+end
+
 -- ---------------------------------------------------------- verification ----
 
 print("\n=== verification refuses a truncated download ===")

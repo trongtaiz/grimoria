@@ -166,64 +166,143 @@ function GrimoriaPlugin:updaterCompareVersions(a, b)
     return 0
 end
 
+local MAX_REDIRECTS = 4
+local MAX_ATTEMPTS = 5
+
 --[[
-One HTTPS GET.
+Is this failure worth trying again, or is it the answer?
+
+The distinction is the whole point. A 404 means the file is not there -- or the
+repository is private, which raw.githubusercontent.com reports as 404 too -- and
+retrying it four times just makes the user wait four times as long for the same
+no. A 503 means the host declined to serve this request *right now*.
+
+Transport failures (`res == nil`, so `code` is an error string rather than a
+number) are transient by the same reasoning: a dropped connection on Kindle wifi
+is the most ordinary thing that can happen to this plugin.
+]]
+local function isTransient(res, code_num)
+    if res == nil then return true end            -- socket-level failure
+    if not code_num then return true end
+    if code_num == 408 or code_num == 425 or code_num == 429 then return true end
+    return code_num >= 500 and code_num < 600
+end
+
+-- LuaSocket's sleep, if this build has it. Called only from the download
+-- sub-process, never from the UI thread, so blocking here is free.
+local function pause(seconds)
+    local ok, socket = pcall(require, "socket")
+    if ok and type(socket) == "table" and socket.sleep then
+        pcall(function() socket.sleep(seconds) end)
+    end
+end
+
+--[[
+One HTTPS GET, retried when the failure looks temporary.
 
 Redirects are followed by hand rather than left to LuaSocket. socket.http's
 built-in redirect logic re-requests through the *http* module, which cannot do
 TLS, so a plain https->https redirect fails with a confusing error. GitHub's
 raw host does redirect, so this is not a hypothetical.
 
+THE RETRY IS NOT DEFENSIVE PROGRAMMING; IT IS THE FIX FOR A REPORTED FAILURE.
+
+Installing 3.2.0 died with "HTTP 503". Measured against the live repository
+afterwards: a burst of the manifest's 24 files returns a 503 for roughly one
+request in a hundred, on no particular file, and the same URL succeeds
+immediately afterwards -- raw.githubusercontent.com throttling a rapid series of
+requests from one address. With no retry, one such blip anywhere in the run
+aborted the whole update, and on a manifest of two dozen files that is not a
+rare event: it is most of the reason an update fails at all.
+
+Nothing was lost when it happened -- the download writes only into
+.update-staging/ and the swap had not begun -- so the update was safe, merely
+useless. Backoff of 1, 2, 4, 8 seconds: long enough for a throttle window to
+pass, short enough that five attempts still finish inside the wait a user will
+tolerate.
+
 `sink_path` writes straight to a file instead of accumulating in memory; the
-manifest fetches want the string, the file downloads want the file.
+manifest fetches want the string, the file downloads want the file. It is
+reopened "wb" on every attempt, so a partial body from a failed try is
+overwritten rather than appended to -- which matters, because a truncated file
+that reached the verify step would fail on a byte count with no hint that a
+retry was involved.
 ]]
 local function httpGet(url, sink_path, ua)
     local ltn12 = require("ltn12")
     local socketutil = nil
     pcall(function() socketutil = require("socketutil") end)
 
-    for _ = 1, 4 do
-        local https = require("ssl.https")
-        local http = require("socket.http")
-        local mod = url:match("^https:") and https or http
+    local last_err = "download failed"
 
-        local body, out_file = {}, nil
-        local sink
-        if sink_path then
-            local f, ferr = io.open(sink_path, "wb")
-            if not f then return nil, "cannot write " .. tostring(sink_path) .. ": " .. tostring(ferr) end
-            out_file = f
-            sink = ltn12.sink.file(f)   -- closes the file itself
-        else
-            sink = ltn12.sink.table(body)
+    for attempt = 1, MAX_ATTEMPTS do
+        if attempt > 1 then
+            local wait = 2 ^ (attempt - 2)          -- 1, 2, 4, 8
+            logger.warn("Updater:", last_err, "-- retrying in", wait, "s (attempt",
+                        attempt, "of", MAX_ATTEMPTS .. ")")
+            pause(wait)
         end
 
-        -- Same lesson as lib/llm.lua: a `timeout =` field inside the request
-        -- table is ignored by LuaSocket. It has to be set on the module.
-        if socketutil then socketutil:set_timeout(20, 120) end
-        local res, code, headers = mod.request{
-            url = url,
-            method = "GET",
-            headers = { ["User-Agent"] = ua or "grimoria.koplugin" },
-            sink = sink,
-            redirect = false,
-        }
-        if socketutil then socketutil:reset_timeout() end
+        local target = url
+        local transient, settled = false, false
 
-        local code_num = tonumber(code)
-        if code_num and code_num >= 300 and code_num < 400 and headers and headers.location then
-            -- Retry at the new location. Any partial file written for the
-            -- redirect body is overwritten by the next attempt's "wb" open.
-            if out_file then pcall(function() out_file:close() end) end
-            url = headers.location
-        elseif res and code_num == 200 then
-            return sink_path and true or table.concat(body)
-        else
-            if out_file then pcall(function() out_file:close() end) end
-            return nil, "HTTP " .. tostring(code) .. " for " .. url
+        for _ = 1, MAX_REDIRECTS do
+            local https = require("ssl.https")
+            local http = require("socket.http")
+            local mod = target:match("^https:") and https or http
+
+            local body, out_file = {}, nil
+            local sink
+            if sink_path then
+                local f, ferr = io.open(sink_path, "wb")
+                if not f then
+                    -- A filesystem that will not take the file is not something
+                    -- waiting will fix.
+                    return nil, "cannot write " .. tostring(sink_path) .. ": " .. tostring(ferr)
+                end
+                out_file = f
+                sink = ltn12.sink.file(f)   -- closes the file itself
+            else
+                sink = ltn12.sink.table(body)
+            end
+
+            -- Same lesson as lib/llm.lua: a `timeout =` field inside the request
+            -- table is ignored by LuaSocket. It has to be set on the module.
+            if socketutil then socketutil:set_timeout(20, 120) end
+            local res, code, headers = mod.request{
+                url = target,
+                method = "GET",
+                headers = { ["User-Agent"] = ua or "grimoria.koplugin" },
+                sink = sink,
+                redirect = false,
+            }
+            if socketutil then socketutil:reset_timeout() end
+
+            local code_num = tonumber(code)
+            if code_num and code_num >= 300 and code_num < 400 and headers and headers.location then
+                if out_file then pcall(function() out_file:close() end) end
+                target = headers.location
+            elseif res and code_num == 200 then
+                return sink_path and true or table.concat(body)
+            else
+                if out_file then pcall(function() out_file:close() end) end
+                last_err = "HTTP " .. tostring(code) .. " for " .. target
+                transient = isTransient(res, code_num)
+                settled = true
+                break
+            end
+        end
+
+        -- A redirect chain that never lands is a broken URL, not a busy server.
+        if not settled then
+            return nil, "too many redirects for " .. url
+        end
+        if not transient then
+            return nil, last_err
         end
     end
-    return nil, "too many redirects"
+
+    return nil, last_err .. " (gave up after " .. MAX_ATTEMPTS .. " attempts)"
 end
 
 --[[

@@ -185,7 +185,14 @@ def main():
         sys.exit("make_release: no grimoria.koplugin/ next to tools/")
 
     if not args.no_bump:
-        print("bumped %s -> %s" % (bump_meta(args.version), args.version))
+        path = bump_meta(args.version)
+        print("bumped %s -> %s" % (path, args.version))
+        # Stage it immediately. check_against_git compares the working tree to
+        # the index, and this script has just written a file the caller staged
+        # moments ago -- without this the tool always trips its own check on
+        # _meta.lua, which teaches the operator to distrust the check.
+        if git("add", "--", os.path.relpath(path, REPO_ROOT)) is None:
+            print("make_release: WARNING -- could not stage the bumped _meta.lua")
 
     files = []
     total = 0

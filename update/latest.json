@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Look up in Grimoria from the highlight menu, chapter appearances, full-page summary and cards, chapter-range analyses.",
- "tag": "v3.2.0",
+ "notes": "Fixes updates failing with HTTP 503: a busy server is now retried instead of ending the update.",
+ "tag": "v3.2.1",
  "updater_version": 1,
- "version": "3.2.0"
+ "version": "3.2.1"
 }

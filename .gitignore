@@ -63,3 +63,6 @@ grimoria.koplugin/.update-state.json
 *~
 .DS_Store
 Thumbs.db
+
+# Python bytecode from the test harness
+__pycache__/

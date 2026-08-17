@@ -211,6 +211,75 @@ job, only an explicit "Cancel analysis" kills it, and a request that finishes
 while the confirmation is open must not leave a button that resumes a dead
 coroutine.
 
+## The multiturn experiment (`incremental_*`)
+
+A proposed redesign, tested here rather than argued about: instead of one
+request carrying the whole book, send **one request per chapter** — chapter
+*k*'s text plus the summaries and character roster produced by earlier turns,
+and never any later text. The model then cannot leak what it has never seen.
+That is *input-side* spoiler protection, where the shipped design's protection
+is *output-side* (chapter tags → filter → guard).
+
+```sh
+cd test
+export OPENROUTER_API_KEY=sk-or-v1-...
+python3 incremental_prompts.py 3            # print turn 3's prompt, no network
+python3 incremental_run.py --from 1 --to 8  # the loop; free model, resumable
+# the interesting range without paying for 46 turns first:
+python3 incremental_run.py --from 45 --to 48 --seed-through 44
+
+python3 json_to_lua.py $FIX/incremental/turn_01.json $FIX/incremental/turn_01.lua  # each
+lua incremental_merge.lua .. $FIX/incremental $FIX/incremental/merged.lua
+lua test_spoiler.lua .. $FIX/incremental/merged.lua      # same suite, same property
+```
+
+`incremental_prompts.py` slices the shipped instruction block out of the
+whole-book `prompt.txt`, so the two flows under comparison differ **only** in
+what the experiment is about. `incremental_merge.lua` folds the turn replies
+and runs the shipped `validateAndCleanData` + `SpoilerGuard` on the result, so
+a merged analysis is judged by exactly the suites a normal one is.
+
+**Measured result (Thập Giác Quán, 7 live turns on
+`dots-studio/dots-3-note-preview:free`, $0):**
+
+| | whole-book | multiturn |
+|---|---|---|
+| raw leaks, ch 1–7 | 0 | 0 |
+| after the guard | 0 | 0 |
+| content at ch 7 | 8 cards, 3,834 chars | 10 cards, 6,547 chars |
+| tokens | 104,316 in / 36,458 out (1 request) | 6,112 in / 8,615 out **per turn** |
+
+Extrapolated to 56 chapters, input by a linear fit on measured growth
+(`in(turn) ≈ 3208 + 726·turn`, state genuinely accumulates) → **1.34M input
+tokens**; output by two independent methods that agree — flat per-turn mean →
+482k, and tokens-per-1k-chapter-chars (1,209, measured over turns 2–7) applied
+to the whole book → 390k. Against 104,316 in / 36,458 out for one request,
+that is **roughly 11–13× the cost** on any provider. Even halving the output
+estimate leaves ~8×.
+
+The obvious objection — "later turns are cheaper, since the roster saturates
+and returning characters emit almost nothing" — was tested and is **false**.
+By turns 4–7 each turn had 0–1 new characters and 7 returning ones, and output
+stayed at 9,122 / 9,291 / 9,489 / 15,838 tokens. The model re-emits substantial
+JSON for returning characters whatever the prompt says. Output dominates the
+bill, and the schema overhead is paid once per turn, 56 times. The
+per-request saving is real and irrelevant: billing sums over requests.
+
+Two further findings worth keeping:
+
+- **Free models cannot run the loop.** Chapter 8 returned `Provider returned
+  error` (400) five times with distinct request ids. Bisected: chapter 8's text
+  alone is accepted, the same instructions with chapter 7's text are accepted,
+  and only the *combination* fails — a provider-side content filter on a murder
+  mystery. `z-ai/glm-5.2:free` was rate-limited upstream at the same moment.
+- **Multiturn produced *more* content, not less**, which is the honest reading
+  of a 0-leak result: it did not buy safety by hiding the book.
+
+The 0–0 leak comparison is weak evidence on its own — seven early chapters of a
+mystery have little to give away, which is why the whole-book flow also scored
+0. The decisive case is the identity reveal at chapter 47, and it is exactly
+what the free tier refused to run.
+
 ## The fixture
 
 Steps 1–5 need a book, and no book ships with this repository — redistributing

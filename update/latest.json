@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Fixes updates failing with HTTP 503: a busy server is now retried instead of ending the update.",
- "tag": "v3.2.1",
+ "notes": "Character intros were never displayed; the filter now delivers what the reader has earned.",
+ "tag": "v3.2.2",
  "updater_version": 1,
- "version": "3.2.1"
+ "version": "3.2.2"
 }

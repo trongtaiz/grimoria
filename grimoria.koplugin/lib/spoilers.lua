@@ -330,7 +330,31 @@ substitute it in when this rebuild produces nothing.
 ]]
 local function buildCharacter(c, limit, last)
     local bits = {}
-    local intro = resolveTagged(c.intro, limit, last)
+    --[[
+    `intro` is a PLAIN STRING pinned to the character's first_chapter, and must
+    not go through resolveTagged.
+
+    It did, and the cost was total: resolveTagged reads a bare string as
+    end-of-book, so every character's opening sentence was blank for every
+    reader who had not finished the book -- measured on a real analysis, 14 of
+    14 intros written, 0 of 14 ever displayed, at every chapter including the
+    last (the limit is `here - 1`, so even standing in chapter 56 of 56 leaves
+    it hidden). What the reader saw was a card that began mid-life with "[2]
+    Mai explores the lighthouse" and never said who Mai was.
+
+    The pin is what makes showing it correct rather than a hole in the filter.
+    The card itself only exists from first_chapter on, the prompt requires the
+    sentence to contain nothing the text has not established by that chapter,
+    and lib/spoilerguard.lua rule 3 delays the WHOLE CARD when an intro names
+    somebody unmet -- so the intro is earned at exactly the moment the card is.
+    There is no chapter at which the card is visible and its intro is not.
+
+    Do not "fix" this by teaching resolveTagged that strings are visible. That
+    branch is what makes a pre-tagging cache's role/occupation/gender fail
+    closed, and loosening it would un-harden every analysis stored before the
+    schema changed, on every device, silently.
+    ]]
+    local intro = type(c.intro) == "string" and c.intro or ""
     if #intro > 0 then bits[#bits + 1] = intro end
 
     if c.merge_chapter and type(c.revelation) == "string" and #c.revelation > 0 then

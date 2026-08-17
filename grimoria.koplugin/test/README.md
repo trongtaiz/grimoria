@@ -172,6 +172,20 @@ running it and watching it cry wolf:
   `nghi vấn` and hid two characters introduced as literature students.
   `validate.py` had already recorded this; the Lua side rediscovered it.
 
+It also sweeps the **converse** property, which is newer and is there because
+its absence let a real regression ship. Every leak check is satisfied perfectly
+by a filter that shows nothing: an empty field cannot name anything. So the
+delivery sweep asserts the other half — *at chapter k, a visible card carries
+the text its source supplied for the chapters the reader has finished* — an
+intro when the analysis wrote one, and at least as many chapter lines as the
+source has developments up to k. What it caught: `intro` is a plain string and
+was being run through the tagged-value resolver, which reads a plain string as
+end-of-book, so 14 of 14 character intros in the saved reply were written by
+the model and displayed to nobody, at every chapter including the last. Cards
+whose source cannot be identified (fusion unions merge groups, so a display
+name need not appear in any one merge entry) are skipped and **counted**, so
+the skip cannot quietly grow into "nothing was checked".
+
 The suite states its own blind spot too: it matches names, so a semantic leak
 carrying no name — a summary that foreshadows in the abstract — is invisible
 to it, and stays the prompt's responsibility.

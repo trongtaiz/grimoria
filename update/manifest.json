@@ -3,7 +3,7 @@
  "files": [
   {
    "path": "_meta.lua",
-   "sha256": "3d8af3e599215aa044a42c79ded251e6051ba3c8e9e925674d9e2983bd9ebfcc",
+   "sha256": "877f67b3946e6420092f0f696ad8a0ce52567ba25a69f6e0e0fc4a04e76a215e",
    "size": 353
   },
   {
@@ -73,8 +73,8 @@
   },
   {
    "path": "lib/spoilers.lua",
-   "sha256": "2c4468bfc54f52cb23a74f069c26a01e769eb9f20f2b661f8f58f226518d211a",
-   "size": 28227
+   "sha256": "5381f86e1f84976e70f6c3c25565851e159ff1c3a70efb682fa50473985bc149",
+   "size": 29638
   },
   {
    "path": "lib/updater.lua",
@@ -122,6 +122,6 @@
    "size": 13322
   }
  ],
- "tag": "v3.2.1",
- "version": "3.2.1"
+ "tag": "v3.2.2",
+ "version": "3.2.2"
 }

@@ -362,6 +362,155 @@ local function sweepAll(data, label)
     return #all
 end
 
+-- --------------------------------------------------- the other direction ----
+
+--[[
+DELIVERY: the filter must also SHOW what the reader has earned.
+
+Everything above asserts one half of the property -- that nothing unearned
+reaches the screen -- and that half is satisfied perfectly by a filter that
+shows nothing at all. An empty field passes every leak check trivially, so the
+suite was structurally blind to the failure that actually shipped: `intro` is
+a plain string, `resolveTagged` reads a plain string as end-of-book, and every
+character's opening sentence was blanked for every reader who had not finished
+the book. Measured on the saved reply -- 14 of 14 intros written by the model,
+0 of 14 displayed at ANY chapter. Eleven green suites saw none of it.
+
+So this sweep asserts the converse, and it is the assertion that has to exist
+for "fails closed" to mean a filter rather than a wall:
+
+  at chapter k, a visible card must carry the text its source supplied for
+  chapters the reader has already finished.
+
+Concretely, per visible character card:
+  * a met source with a non-empty intro  =>  the card's intro is non-empty
+  * n source developments at or before k =>  at least n chapter lines in the
+    rebuilt description
+
+Cards whose source cannot be identified are skipped and counted rather than
+failed: fusion unions merge groups, so a display name need not appear in any
+single merge entry, and a test that guesses wrong there would fail on a
+correct filter. The count is printed so the skip can never grow silently into
+"nothing was actually checked".
+]]
+local function sourcesFor(data, card)
+    local out = {}
+    for _, c in ipairs(data.characters or {}) do
+        if c.name == card.name then out[#out + 1] = c end
+    end
+    if #out > 0 then return out end
+
+    -- A fused card is displayed under merged_name; its members are the names
+    -- of whichever merge produced that display name.
+    for _, m in ipairs(data.identity_merges or {}) do
+        if m.merged_name == card.name then
+            for _, n in ipairs(m.names or {}) do
+                for _, c in ipairs(data.characters or {}) do
+                    if c.name == n then out[#out + 1] = c end
+                end
+            end
+        end
+    end
+    return out
+end
+
+local function deliversAt(data, k)
+    plugin.book_data = data
+    plugin.show_whole_book = false
+    plugin._include_current_chapter = false
+    plugin.filter_chapter = nil
+    readThrough(k)
+    plugin:applyChapterFilter()
+
+    local problems, skipped = {}, 0
+    for _, card in ipairs(plugin.characters or {}) do
+        local sources = sourcesFor(data, card)
+        if #sources == 0 then
+            skipped = skipped + 1
+        else
+            local want_intro, want_devs = false, 0
+            for _, c in ipairs(sources) do
+                local met = (tonumber(c.first_chapter) or math.huge) <= k
+                if met and type(c.intro) == "string" and #c.intro > 0 then
+                    want_intro = true
+                end
+                if met then
+                    for _, bc in ipairs(c.by_chapter or {}) do
+                        if (tonumber(bc.chapter) or math.huge) <= k
+                            and type(bc.development) == "string" and #bc.development > 0 then
+                            want_devs = want_devs + 1
+                        end
+                    end
+                end
+            end
+
+            if want_intro and #card.intro == 0 then
+                problems[#problems + 1] = string.format(
+                    "ch%d %s: the analysis has an intro for this character and the card shows none",
+                    k, tostring(card.name))
+            end
+
+            local shown = 0
+            for _ in tostring(card.description):gmatch("%[%d+%]") do shown = shown + 1 end
+            if shown < want_devs then
+                problems[#problems + 1] = string.format(
+                    "ch%d %s: %d development(s) earned by chapter %d, %d on the card",
+                    k, tostring(card.name), want_devs, k, shown)
+            end
+        end
+    end
+    return problems, skipped
+end
+
+local function deliversAll(data, label)
+    local last = 1
+    for _, ch in ipairs(data.chapters or {}) do
+        last = math.max(last, tonumber(ch.index) or 1)
+    end
+    local all, skipped = {}, 0
+    for k = 1, last do
+        local p, s = deliversAt(data, k)
+        for _, one in ipairs(p) do all[#all + 1] = one end
+        skipped = skipped + s
+    end
+    check(#all == 0, label .. ": " .. last .. " chapters swept, "
+          .. #all .. " piece(s) of earned text withheld"
+          .. (skipped > 0 and (" [" .. skipped .. " unidentifiable card(s) skipped]") or ""))
+    for i = 1, math.min(#all, 8) do print("           " .. all[i]) end
+    if #all > 8 then print("           ... and " .. (#all - 8) .. " more") end
+    return #all
+end
+
+print("\n=== the filter delivers what the reader has earned (synthetic) ===")
+do
+    --[[
+    The shape of the shipped bug, in miniature: a plain-string intro and
+    developments spread across a book long enough that the reader is nowhere
+    near the end. Before the fix this fails at every chapter from 1 to 19.
+    ]]
+    local chapters = {}
+    for i = 1, 20 do
+        chapters[i] = { index = i, title = "Chapter " .. i, summary = "", events = {} }
+    end
+    local data = LLM:validateAndCleanData({
+        book_title = "T", author = "A", chapters = chapters,
+        characters = {
+            { name = "Mai", first_chapter = 1,
+              intro = "A first-year student who arrives by ferry.",
+              role = { { value = "Protagonist", first_chapter = 1 } },
+              by_chapter = {
+                  { chapter = 2, development = "Mai explores the lighthouse." },
+                  { chapter = 4, development = "Mai argues with the caretaker." },
+                  { chapter = 15, development = "Mai finds the letter." },
+              } },
+            { name = "Bao", first_chapter = 3, intro = "The harbour master.",
+              by_chapter = { { chapter = 3, development = "Bao refuses to sail." } } },
+        },
+        locations = {}, themes = {}, historical_figures = {}, identity_merges = {},
+    })
+    deliversAll(data, "a plain-string intro reaches the card")
+end
+
 -- ------------------------------------------- fixture: the reported bug ----
 
 --[[
@@ -966,6 +1115,12 @@ if reply_file then
           retagged, fields, fields > 0 and (retagged / fields * 100) or 0))
     check(retagged <= math.max(8, math.floor(fields * 0.15)),
           "the guard is a net, not a blanket")
+
+    -- And the converse, on the real analysis: every sentence the reader has
+    -- earned actually reaches the screen. This is the pass that catches a
+    -- filter deleting content, which no leak sweep can see.
+    print("\n=== the same reply: does the filter deliver? ===")
+    deliversAll(guarded, "the saved reply, after the guard")
 else
     print("\n=== every chapter of the saved reply ===")
     print("  SKIP  no reply given -- pass one from private/fixtures/ to run the sweep")

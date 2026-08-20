@@ -3,7 +3,7 @@
  "files": [
   {
    "path": "_meta.lua",
-   "sha256": "745d6c2a4239d13606387f1f327b0f9701278c21f51311a245b98422ec4117e3",
+   "sha256": "89c43a3ce639bb8686d5a94afd6284a81a21a46ac7eeaaa6524bb26aa9f76e0a",
    "size": 353
   },
   {
@@ -38,8 +38,8 @@
   },
   {
    "path": "lib/fetch.lua",
-   "sha256": "aa9827ccca4ecdff8d26a49feecf32b47e1a55203734347a46a3a9dad01d64a3",
-   "size": 29060
+   "sha256": "d42d1b7f4221744bcd57fb0c79cecbd1e817502761f4b08936b7b3f59c33588e",
+   "size": 29072
   },
   {
    "path": "lib/i18n.lua",
@@ -68,8 +68,8 @@
   },
   {
    "path": "lib/spoilerguard.lua",
-   "sha256": "32e7e3a401310f0c5bbb1f24e55454ba1780b795a88761f058e562ed2a7accbc",
-   "size": 23610
+   "sha256": "3c9aa6578f908d0b3dd80fc0aacf0392d2a3122250378a487ef60247fe16b837",
+   "size": 25252
   },
   {
    "path": "lib/spoilers.lua",
@@ -118,10 +118,10 @@
   },
   {
    "path": "prompts/en.lua",
-   "sha256": "5c8afe6155058e470ef4ba7a77430c827698b6c693253f4c515cb35bd2dfa483",
-   "size": 14598
+   "sha256": "1b9a91e096e92c4a962fc04c2fffb5fa80047b35735283af5f12d97204e24f79",
+   "size": 15493
   }
  ],
- "tag": "v3.3.0",
- "version": "3.3.0"
+ "tag": "v3.3.1",
+ "version": "3.3.1"
 }

@@ -49,11 +49,16 @@ Rules, all applied by moving text LATER rather than deleting it:
      own first_chapter. That is luck: the same prompt, the same book, one run
      split a disguise into two identities and the next stuffed the reveal
      into one card tagged at the disguise scene. When the extracted book
-     text is in hand, a card cannot appear before the chapter where its own
-     name is first printed -- whole-word, same matcher as rule 2, never
-     pulled earlier, fail-open if the name never occurs (a descriptor card
-     or a spelling the model invented must not be buried at end-of-book).
-     Locations and identity_merges.chapter get the same push.
+     text is in hand, a card cannot appear before the chapter where the book
+     first prints its name OR one of its aliases -- whole-word, same matcher
+     as rule 2, never pulled earlier, fail-open if none of those spellings
+     occur (a descriptor card or a spelling the model invented must not be
+     buried at end-of-book). Searching only `c.name` hid a character the
+     book had been calling by her given name since chapter 4, because the
+     model had put the full name in `name` and that string first printed
+     at chapter 38. Locations and identity_merges.chapter still key on
+     their own name field (locations have no aliases; a merge is earned
+     when the LAST of its names is printed).
 
      This is the first rule here grounded in the book rather than in the
      model's declarations. It needs the text, so it runs at fetch (the
@@ -73,9 +78,9 @@ WHAT THIS CANNOT DO, stated plainly rather than implied
 It matches NAMES. A semantic leak carrying no name -- "he would come to regret
 this", a theme phrased as a hint, a summary that foreshadows in the abstract --
 is invisible here, and stays the responsibility of the prompt's per-chapter
-discipline. Rule 5 only delays a card until its own name is printed; it does
-not split one entry into two identities, and it does not run without the
-book text. This module narrows the hole; it does not close it.
+discipline. Rule 5 only delays a card until its name or an alias is printed;
+it does not split one entry into two identities, and it does not run without
+the book text. This module narrows the hole; it does not close it.
 
 MATCHING IS WHOLE-WORD, CASE-INSENSITIVE, AND NOT DIACRITIC-FOLDED
 
@@ -197,7 +202,11 @@ end
 
 --[[
 Rule 5. Push first_chapter (and merge.chapter) forward to where the book
-itself first prints that name. Returns how many fields moved.
+itself first prints that identity. Returns how many fields moved.
+
+For a character, "printed" is the earliest whole-word hit of `name` OR any
+alias. Never pulled earlier than the model tagged; fail-open if none of
+those spellings occur.
 
 `book_text` is folded once. Kindles have little RAM; this is one extra
 string the size of the extract, live only for this pass, at fetch, never
@@ -229,7 +238,33 @@ local function groundToText(data, book_text)
 
     for _, c in ipairs(data.characters or {}) do
         if type(c) == "table" and type(c.name) == "string" then
-            pushField(c, "first_chapter", c.name)
+            local earliest, used = nil, nil
+            local function consider(spelling)
+                if type(spelling) ~= "string" then return end
+                local at = printedChapter(spelling)
+                if at and (not earliest or at < earliest) then
+                    earliest, used = at, spelling
+                end
+            end
+            consider(c.name)
+            for _, a in ipairs(c.aliases or {}) do
+                if type(a) == "table" then
+                    consider(a.alias)
+                elseif type(a) == "string" then
+                    consider(a)
+                end
+            end
+            if earliest then
+                local now = toInt(c.first_chapter, 1)
+                if earliest > now then
+                    c.first_chapter = earliest
+                    moved = moved + 1
+                    logger.info("SpoilerGuard: name", tostring(c.name),
+                                "first printed at ch", earliest,
+                                "(via", tostring(used) .. ")",
+                                "-- held back from ch", now)
+                end
+            end
         end
     end
     for _, l in ipairs(data.locations or {}) do
@@ -268,7 +303,7 @@ Run the rules over one analysis, in place.
 `book_text` is optional. Without it, rule 5 is skipped -- that is how
 cache load looks, and how every existing call site looks. With it (fetch,
 parent process, extract still in scope), a card cannot appear before the
-book prints its name.
+book prints its name or one of its aliases.
 
 Returns the analysis and the number of fields re-tagged, so the caller can log
 it. Deliberately tolerant of shapes it does not recognise: this runs on every

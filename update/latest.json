@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Hold to delete an analysis works. Look up a name from the dictionary popup. TOC lists up to 100 chapters without grouping; names wait until the book prints them.",
- "tag": "v3.3.0",
+ "notes": "A character card is earned when any of their names is printed, not only the longest form. Later jobs still stay hidden.",
+ "tag": "v3.3.1",
  "updater_version": 1,
- "version": "3.3.0"
+ "version": "3.3.1"
 }

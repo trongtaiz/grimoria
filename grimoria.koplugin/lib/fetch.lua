@@ -615,8 +615,8 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
         local guard_ok, retagged = pcall(function()
             local SpoilerGuard = require("lib/spoilerguard")
             -- book_text is still in scope here, in the parent. Rule 5 (a
-            -- name is earned when the book prints it) needs it; cache load
-            -- does not have it and skips that rule on purpose.
+            -- name is earned when the book prints it or an alias) needs it;
+            -- cache load does not have it and skips that rule on purpose.
             local _, n = SpoilerGuard.scan(book_data, book_text)
             return n
         end)

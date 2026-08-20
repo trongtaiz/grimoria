@@ -1072,13 +1072,13 @@ do
 end
 
 --[[
-Rule 5: a name is earned when the book prints it.
+Rule 5: a name is earned when the book prints it or an alias.
 
 Synthetic book text only -- no quotations from any novel. The markers are
 the same shape lib/booktext.lua emits. scan() without book_text must keep
 doing what it did yesterday.
 ]]
-print("\n=== a card cannot appear before the book prints its name ===")
+print("\n=== a card cannot appear before the book prints its name or an alias ===")
 do
     local SpoilerGuard = require("lib/spoilerguard")
     local book = table.concat({
@@ -1126,6 +1126,42 @@ do
     local g4, n5 = SpoilerGuard.scan(no_text)
     check(n5 == 0 and g4.characters[1].first_chapter == 2,
           "without book_text, rule 5 does not run (cache-load shape)")
+
+    -- Given name vs full name is an alias, not a disguise. A card named
+    -- with the rare full form must not wait until that string is printed
+    -- if the book has already been using the given name.
+    local named = LLM:validateAndCleanData({
+        book_title = "T", author = "A",
+        chapters = {
+            { index = 1, title = "One", summary = "", events = {} },
+            { index = 2, title = "Two", summary = "", events = {} },
+            { index = 9, title = "Nine", summary = "", events = {} },
+        },
+        characters = {
+            { name = "Bao Van", first_chapter = 1, intro = "Someone.",
+              aliases = { { alias = "Bao", first_chapter = 1 } },
+              by_chapter = {} },
+        },
+        locations = {}, themes = {}, historical_figures = {},
+        identity_merges = {},
+    })
+    -- Book prints "Bao" in ch1 ("A student named Mai" has no Bao). Give the
+    -- extract a given-name hit in chapter 1 and the full name in chapter 9.
+    local book_alias = table.concat({
+        "=== CHAPTER 1: One ===\nBao opens the door.\n",
+        "=== CHAPTER 2: Two ===\nThe harbour master waves from the pier.\n",
+        "=== CHAPTER 9: Nine ===\nOnly here does the text print Bao Van.\n",
+    }, "")
+    local g5, n6 = SpoilerGuard.scan(named, book_alias)
+    check(n6 == 0 and g5.characters[1].first_chapter == 1,
+          "an earlier alias keeps the card (got ch "
+          .. tostring(g5.characters[1].first_chapter) .. ", moved " .. n6 .. ")")
+
+    local no_alias = tagged("Bao Van", 1)
+    local g6, n7 = SpoilerGuard.scan(no_alias, book_alias)
+    check(n7 >= 1 and g6.characters[1].first_chapter == 9,
+          "without that alias the full name still waits for ch9 (got "
+          .. tostring(g6.characters[1].first_chapter) .. ")")
 end
 
 print("\n=== rule 5 on the reported cache, if the fixture is present ===")

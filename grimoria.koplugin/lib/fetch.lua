@@ -681,4 +681,173 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
     end
 end
 
+--[[
+"Extract quotes": a quotes-only request for a book whose analysis predates the
+quotes field. The alternative is re-buying the whole analysis to gain one
+list. The reply is merged into the ACTIVE analysis and that version is
+rewritten in place -- no new version appears in the picker, because nothing
+the picker distinguishes versions by has changed.
+
+Menu-gated to analyses that HAVE no quotes; the guards repeat here anyway,
+because a gesture or a stale menu can call anything.
+]]
+function GrimoriaPlugin:fetchQuotesOnly()
+    if not (self.ui and self.ui.document) then return end
+    if not self.book_data then
+        UIManager:show(InfoMessage:new{
+            text = self.loc:t("extract_quotes_no_analysis"),
+            timeout = 4,
+        })
+        return
+    end
+
+    local NetworkMgr = require("ui/network/manager")
+    local ConfirmBox = require("ui/widget/confirmbox")
+
+    local function confirmAndRun()
+        UIManager:show(ConfirmBox:new{
+            text = self.loc:t("extract_quotes_confirm"),
+            ok_text = self.loc:t("confirm_analyze"),
+            cancel_text = self.loc:t("cancel"),
+            ok_callback = function()
+                self:runQuotesFetch()
+            end,
+        })
+    end
+
+    if not NetworkMgr:isOnline() then
+        UIManager:show(ConfirmBox:new{
+            text = self.loc:t("network_offline_prompt"),
+            ok_text = self.loc:t("turn_on_wifi"),
+            cancel_text = self.loc:t("cancel"),
+            ok_callback = function()
+                NetworkMgr:turnOnWifi(function() confirmAndRun() end)
+            end,
+        })
+        return
+    end
+    confirmAndRun()
+end
+
+-- The quotes-only fetch itself: same machinery as runFetch (Trapper, wake
+-- hold, cancellable subprocess), with the merge replacing the version save.
+function GrimoriaPlugin:runQuotesFetch()
+    if not self.archive then
+        local Archive = require("lib/archive")
+        self.archive = Archive:new()
+    end
+    if not self.llm then
+        local LLM = require("lib/llm")
+        self.llm = LLM
+        self.llm:init()
+    end
+
+    local book_path = self.ui.document.file
+    local selected_provider = self.ai_provider or self.llm.default_provider or "gemini"
+    local provider_config = self.llm.providers[selected_provider]
+    local title = self.ui.document:getProps().title or "Unknown"
+    local author = self.ui.document:getProps().authors or ""
+    local current_model = provider_config and provider_config.model
+        or self.loc:t("unknown_model")
+
+    local Trapper = require("ui/trapper")
+
+    Trapper:wrap(function()
+        self:holdDeviceAwake()
+        local ok, err = pcall(function()
+            Trapper:info(self.loc:t("stage_extracting"))
+
+            local BookText = require("lib/booktext")
+            local book_text, meta = BookText:extract(self.ui, {
+                max_chars = self:getMaxCharsSetting(),
+            })
+            -- No title-only fallback here: a quote must be verbatim, and a
+            -- model with no text to copy from can only invent them.
+            if not book_text then
+                error(self.loc:t("extract_failed_warning"))
+            end
+
+            Trapper:clear()
+            local trap = self:makeCancelConfirmWidget(
+                string.format(self.loc:t("stage_waiting_trap"), current_model),
+                self.loc:t("fetch_cancel_confirm"),
+                self.loc:t("fetch_cancel_yes"),
+                self.loc:t("fetch_cancel_no"))
+            UIManager:show(trap)
+            UIManager:forceRePaint()
+
+            local completed, qdata, error_code, error_msg =
+                Trapper:dismissableRunInSubprocess(function()
+                    return self.llm:getBookData(title, author, selected_provider, {
+                        book_text = book_text,
+                        truncated = meta and meta.truncated or false,
+                        quotes_only = true,
+                    })
+                end, trap)
+
+            trap:finish()
+
+            if not completed then
+                UIManager:show(InfoMessage:new{
+                    text = self.loc:t("fetch_cancelled"),
+                    timeout = 3,
+                })
+                return
+            end
+
+            if not qdata then
+                local error_text = self.loc:t("error_info") .. "\n\n"
+                    .. ((error_msg and #error_msg > 0) and error_msg
+                        or self.loc:t("ai_fetch_failed"))
+                if error_code then
+                    error_text = error_text .. "\n\n(" .. tostring(error_code) .. ")"
+                end
+                logger.warn("GrimoriaPlugin: quotes fetch failed:", error_code, error_msg)
+                UIManager:show(InfoMessage:new{ text = error_text })
+                return
+            end
+
+            local fetched = qdata.quotes or {}
+            if #fetched == 0 then
+                UIManager:show(InfoMessage:new{
+                    text = self.loc:t("extract_quotes_none"),
+                    timeout = 4,
+                })
+                return
+            end
+
+            --[[
+            Merge, then re-normalise against the ACTIVE analysis. The child
+            validated its own reply, but that reply has no chapter list, so
+            its untagged entries carry the no-chapters sentinel; running
+            validateAndCleanData again with the real chapters in place keeps
+            tagged quotes as they are and leaves sentinel ones hidden --
+            fail closed, both times, and idempotent by design.
+            ]]
+            self.book_data.quotes = fetched
+            self.book_data = self.llm:validateAndCleanData(self.book_data)
+            self:applyChapterFilter()
+
+            local saved = self.archive:updateActivePayload(book_path, self.book_data)
+            local cache_msg = saved and self.loc:t("cache_saved")
+                or self.loc:t("cache_save_failed")
+
+            UIManager:show(InfoMessage:new{
+                text = string.format(self.loc:t("extract_quotes_done"),
+                    #(self.book_data.quotes or {})) .. "\n\n" .. cache_msg,
+                timeout = 6,
+            })
+        end)
+        self:releaseDeviceAwake()
+
+        if not ok then
+            logger.warn("GrimoriaPlugin: quotes fetch failed with an error:", err)
+            Trapper:clear()
+            UIManager:show(InfoMessage:new{
+                text = self.loc:t("error_info") .. "\n\n" .. tostring(err),
+            })
+        end
+    end)
+end
+
 return GrimoriaPlugin

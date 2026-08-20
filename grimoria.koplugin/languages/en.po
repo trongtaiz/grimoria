@@ -454,6 +454,23 @@ msgstr "NO"
 # EXTRA TITLES
 # ==============================
 
+msgid "menu_extract_quotes"
+msgstr "🗨️ Extract quotes (AI)"
+
+msgid "extract_quotes_confirm"
+msgstr "Extract quotes from this book?
+
+One small request: the AI re-reads the text and returns up to 20 verbatim passages, which are added to the current analysis and shown on the sleep screen as you reach them."
+
+msgid "extract_quotes_done"
+msgstr "✅ %d quotes extracted and saved"
+
+msgid "extract_quotes_none"
+msgstr "The model returned no quotes for this text."
+
+msgid "extract_quotes_no_analysis"
+msgstr "Run an AI analysis first — quotes are stored on the active analysis."
+
 msgid "quotes_title"
 msgstr "Quotes"
 

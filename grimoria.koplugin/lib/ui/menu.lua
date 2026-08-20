@@ -141,6 +141,21 @@ function GrimoriaPlugin:addToMainMenu(menu_items)
                 end,
             },
             {
+                -- Only lights up for an analysis made before the quotes field
+                -- existed: one cheap request adds the list without re-buying
+                -- the analysis. An analysis that has quotes hides it -- the
+                -- ordinary fetch already returns them.
+                text = self.loc:t("menu_extract_quotes"),
+                keep_menu_open = true,
+                enabled_func = function()
+                    return self.book_data ~= nil
+                        and #(self.book_data.quotes or {}) == 0
+                end,
+                callback = function()
+                    self:fetchQuotesOnly()
+                end,
+            },
+            {
                 text = self.loc:t("menu_ai_settings"),
                 keep_menu_open = true,
                 sub_item_table = {

@@ -6,10 +6,13 @@ and calls LLM:createPrompt, so what gets sent to OpenRouter below is what
 the plugin sends. Only KOReader's own modules are stubbed, and only the ones
 lib/llm pulls in at load time -- none of them take part in building a prompt.
 
-  usage: lua build_prompt.lua <plugin_dir> <book_text_file> <out_prompt_file>
+  usage: lua build_prompt.lua <plugin_dir> <book_text_file> <out_prompt_file> [quotes_only]
+
+A fourth argument of "quotes_only" builds the quotes-only prompt instead --
+the one fetchQuotesOnly sends for an analysis that predates the quotes field.
 ]]
 
-local plugin_dir, text_file, out_file = ...
+local plugin_dir, text_file, out_file, mode = ...
 package.path = plugin_dir .. "/?.lua;" .. package.path
 
 local function stub(name, tbl) package.loaded[name] = tbl end
@@ -41,6 +44,7 @@ local prompt = LLM:createPrompt(
         truncated = false,
         chapter_count = 56,
         dev_budget = math.min(700, math.max(120, 56 * 12)),
+        quotes_only = (mode == "quotes_only") or nil,
     })
 
 local out = assert(io.open(out_file, "w"))
@@ -57,5 +61,13 @@ print("est. tokens    : " .. math.ceil(#prompt / 3))
 print("text markers   : " ..
       tostring(prompt:find(LLM.TEXT_START, 1, true) ~= nil) .. " / " ..
       tostring(prompt:find(LLM.TEXT_END, 1, true) ~= nil))
-print("has schema     : " .. tostring(prompt:find("identity_merges", 1, true) ~= nil))
-print("has budget note: " .. tostring(prompt:find("LENGTH BUDGET", 1, true) ~= nil))
+if mode == "quotes_only" then
+    print("has schema     : " .. tostring(prompt:find("QUOTES-ONLY run", 1, true) ~= nil))
+    -- section_spoilers names identity_merges as a rule; the full schema's
+    -- distinctive key is book_title, which a quotes-only run must not ask for.
+    print("full schema out: " .. tostring(prompt:find('"book_title":', 1, true) == nil))
+else
+    print("has schema     : " .. tostring(prompt:find("identity_merges", 1, true) ~= nil))
+    print("has quotes     : " .. tostring(prompt:find("QUOTES:", 1, true) ~= nil))
+    print("has budget note: " .. tostring(prompt:find("LENGTH BUDGET", 1, true) ~= nil))
+end

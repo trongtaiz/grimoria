@@ -454,6 +454,23 @@ msgstr "KHÔNG"
 # TIÊU ĐỀ KHÁC
 # ==============================
 
+msgid "menu_extract_quotes"
+msgstr "🗨️ Trích xuất trích dẫn (AI)"
+
+msgid "extract_quotes_confirm"
+msgstr "Trích xuất trích dẫn từ cuốn sách này?
+
+Một yêu cầu nhỏ: AI đọc lại văn bản và trả về tối đa 20 trích đoạn nguyên văn, được thêm vào bản phân tích hiện tại và hiển thị trên màn hình ngủ khi bạn đọc tới."
+
+msgid "extract_quotes_done"
+msgstr "✅ Đã trích xuất và lưu %d trích dẫn"
+
+msgid "extract_quotes_none"
+msgstr "Mô hình không trả về trích dẫn nào cho văn bản này."
+
+msgid "extract_quotes_no_analysis"
+msgstr "Hãy chạy phân tích AI trước — trích dẫn được lưu trên bản phân tích đang dùng."
+
 msgid "quotes_title"
 msgstr "Trích dẫn"
 

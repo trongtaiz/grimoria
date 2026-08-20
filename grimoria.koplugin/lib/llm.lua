@@ -628,27 +628,49 @@ function LLM:createPrompt(title, author, context)
     local p = self.prompts
     context = context or {}
 
-    local parts = {
-        p.system_instruction,
-        string.format('Book: "%s"\nAuthor: %s', title or "Unknown", author or "Unknown"),
-        p.grounding,
-        p.section_spoilers,
-        p.section_language,
-        p.section_chapters,
-        p.section_characters,
-        p.section_merges,
-        p.section_locations,
-        p.section_themes,
-        p.section_quotes,
-        p.section_historical_figures,
-        string.format(p.section_author_bio, author or "Unknown"),
-        p.json_schema,
-    }
+    local parts
+    if context.quotes_only then
+        --[[
+        A quotes-only run: the book has an analysis already, made before the
+        quotes field existed, and re-buying the whole analysis to gain one
+        list would waste the reader's money. Grounding and spoiler discipline
+        still apply in full -- a verbatim quote is exactly the kind of text
+        that can hand over a twist -- but every section that would ask for
+        anything else is left out, so the reply is small and cheap.
+        ]]
+        parts = {
+            p.system_instruction,
+            string.format('Book: "%s"\nAuthor: %s', title or "Unknown", author or "Unknown"),
+            p.grounding,
+            p.section_spoilers,
+            p.section_quotes,
+            p.json_schema_quotes_only,
+        }
+    else
+        parts = {
+            p.system_instruction,
+            string.format('Book: "%s"\nAuthor: %s', title or "Unknown", author or "Unknown"),
+            p.grounding,
+            p.section_spoilers,
+            p.section_language,
+            p.section_chapters,
+            p.section_characters,
+            p.section_merges,
+            p.section_locations,
+            p.section_themes,
+            p.section_quotes,
+            p.section_historical_figures,
+            string.format(p.section_author_bio, author or "Unknown"),
+            p.json_schema,
+        }
+    end
 
     -- Long books can ask for more per-chapter detail than the reply is allowed
     -- to contain (65,536 output tokens, shared with the thinking pass). Say the
     -- ceiling out loud rather than letting the answer be cut off mid-JSON.
-    if context.chapter_count and context.chapter_count > 25 then
+    -- Not on a quotes-only run: its reply is 20 short entries at most, and the
+    -- clause talks about by_chapter entries the schema does not even ask for.
+    if not context.quotes_only and context.chapter_count and context.chapter_count > 25 then
         parts[#parts + 1] = string.format(
             "LENGTH BUDGET: this book has %d chapters, which is a lot. Emit at "
             .. "most about %d by_chapter entries IN TOTAL across all characters. "
@@ -1851,16 +1873,27 @@ function LLM:validateAndCleanData(data)
     function runs on every cache load as well as every fresh reply.
     Deduplicated on the text since the point is a rotation of distinct lines;
     capped because the consumer wants a rotation, not an anthology.
+
+    The untagged default needs one extra case here. "Untagged means
+    end-of-book" leans on last_chapter, and a QUOTES-ONLY reply (see
+    createPrompt) carries no chapter list at all, so last_chapter is 1 --
+    which would publish an untagged quote on page one, the exact failure the
+    rule exists to prevent. With no chapters to measure the book by, an
+    untagged quote goes to a chapter no reader ever reaches instead. The
+    sentinel is a plain finite number on purpose: it must survive
+    Archive:serialize and a re-run of this function unchanged (math.huge
+    serialises as "inf", which does not parse back).
     ]]
     local MAX_QUOTES = 20
+    local quote_untagged = #data.chapters > 0 and last_chapter or 1000000000
     local quotes, seen_quotes = {}, {}
     for _, qt in ipairs(data.quotes or {}) do
         local body, at, speaker
         if type(qt) == "string" then
-            body, at, speaker = qt, last_chapter, ""
+            body, at, speaker = qt, quote_untagged, ""
         elseif type(qt) == "table" then
             body = ensureString(qt.quote or qt.text, "")
-            at = toInt(qt.chapter, last_chapter)
+            at = toInt(qt.chapter, quote_untagged)
             speaker = ensureString(qt.speaker, "")
         end
         if body and #body > 0 and not seen_quotes[body] and #quotes < MAX_QUOTES then

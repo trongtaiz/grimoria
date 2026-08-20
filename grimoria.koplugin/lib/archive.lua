@@ -457,6 +457,65 @@ function Archive:saveCache(book_path, data, meta)
     return true
 end
 
+--[[
+Rewrite the ACTIVE version's payload in place.
+
+Exists for the quotes-only fetch: it enriches an analysis that already exists,
+and saving the result as a NEW version would give the picker two entries that
+differ by one field, with the reader expected to know which is which. The id,
+the file name and the index entry all stay; only the payload changes.
+
+Written to a temp file first and renamed over the original, because the
+original is a paid analysis and a write that dies halfway must not take it
+along. os.rename replaces the target atomically on the devices this runs on
+(POSIX); the fallback branch covers filesystems that refuse to replace.
+]]
+function Archive:updateActivePayload(book_path, data)
+    if not book_path or not data then return false end
+    local dir = self:getSidecarDir(book_path)
+    if not dir then return false end
+
+    local index = self:loadIndex(book_path)
+    local active = self:getActiveVersion(index)
+    if not active then
+        logger.warn("Archive: no active version to update")
+        return false
+    end
+
+    local full = dir .. "/" .. active.file
+    data.cache_version = self.PAYLOAD_VERSION
+
+    local tmp = full .. ".tmp"
+    local ok, err = pcall(function()
+        local f = assert(io.open(tmp, "w"))
+        local body = self:serialize(data)
+        assert(body, "serialisation failed")
+        f:write("-- Grimoria Cache v" .. self.PAYLOAD_VERSION .. "\n")
+        f:write("-- Updated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n")
+        f:write("return " .. body)
+        f:close()
+    end)
+    if not ok then
+        logger.warn("Archive: could not write updated payload:", tostring(err))
+        os.remove(tmp)
+        return false
+    end
+
+    local renamed = os.rename(tmp, full)
+    if not renamed then
+        os.remove(full)
+        renamed = os.rename(tmp, full)
+    end
+    if not renamed then
+        logger.warn("Archive: could not move updated payload into place")
+        os.remove(tmp)
+        return false
+    end
+
+    logger.info("Archive: updated active version", tostring(active.id), "in place")
+    return true
+end
+
 -- The analysis currently selected for this book.
 function Archive:loadCache(book_path)
     if not book_path then return nil end

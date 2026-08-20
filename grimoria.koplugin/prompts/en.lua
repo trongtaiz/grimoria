@@ -313,6 +313,17 @@ gives you nothing:
   ]
 }]],
 
+json_schema_quotes_only = [[
+REQUIRED JSON FORMAT - this is a QUOTES-ONLY run: emit exactly this shape and
+nothing else. An entry whose "chapter" you cannot read off a
+"=== CHAPTER n ===" marker must be left out entirely - the reader's app
+discards untagged quotes rather than risk showing one too early.
+{
+  "quotes": [
+    { "quote": "verbatim passage from the text", "chapter": 1, "speaker": "" }
+  ]
+}]],
+
 fallback = {
     unknown_book = "Unknown Book",
     unknown_author = "Unknown Author",

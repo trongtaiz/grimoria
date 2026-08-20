@@ -177,6 +177,31 @@ do
           "including historical figures")
 end
 
+print("\n=== quotes prompt is a quality bar, not a quota ===")
+do
+    local LLM = require("lib/llm")
+    LLM.current_language = "en"
+    LLM:loadPrompts()
+
+    local first = LLM:createPrompt("T", "A", { book_text = "x" })
+    check(not first:find("8-15", 1, true),
+          "does not open with an 8-15 quota")
+    check(first:find("NO quota", 1, true) ~= nil,
+          "says there is no quota to fill")
+    check(first:find("hard cap, not a target", 1, true) ~= nil,
+          "20 is a hard cap, not a target")
+    check(first:find("beautifully written", 1, true) ~= nil,
+          "asks for lines that are beautifully written")
+    check(first:find("do not\npad the list", 1, true) ~= nil,
+          "tells the model not to pad")
+
+    local only = LLM:createPrompt("T", "A", { book_text = "x", quotes_only = true })
+    check(only:find("NO quota", 1, true) ~= nil,
+          "quotes-only run carries the same bar")
+    check(only:find("may be empty", 1, true) ~= nil,
+          "quotes-only schema allows an empty array")
+end
+
 print("\n=== scheme 2 groups by DocFragment; scheme 1 still pairs ===")
 do
     -- Above MAX_CHAPTERS (100). 126 pair-buckets to 63; 13 fragments stay 13.

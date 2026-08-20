@@ -124,10 +124,11 @@ Everything below is local: no network, no cost, and it works with wifi off.
 - **The summary, themes and every card open as a full page** you can turn and
   close when you're done, with a heading per chapter — not a popup that
   disappears after fifteen seconds.
-- **Quotes** sit at the bottom of the summary: passages copied verbatim from
-  the text, only from chapters you have already finished. They are also written
-  to `<book>.sdr/grimoria_quotes.lua` for other KOReader patches (a sleep-screen
-  set lives in this repo under `patches/`).
+- **Quotes** sit at the bottom of the summary: lines worth keeping, copied
+  verbatim from the text, only from chapters you have already finished. A
+  short or dry book may have few, or none — 20 is a ceiling, not a target.
+  They are also written to `<book>.sdr/grimoria_quotes.lua` for other KOReader
+  patches (a sleep-screen set lives in this repo under `patches/`).
 
 ## What it costs
 

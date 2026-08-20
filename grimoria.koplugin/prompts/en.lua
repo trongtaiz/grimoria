@@ -203,11 +203,20 @@ the ending.
 ]],
 
 section_quotes = [[
-QUOTES: 8-15 memorable passages COPIED VERBATIM from the supplied text -
-lines of dialogue or narration striking enough that a reader would want to
-meet them again. Never more than 20; fewer is fine, and a short or dry text
-may support only a handful. Do not invent, paraphrase, translate, or trim
-words inside a quote - it must appear in the text exactly as written.
+QUOTES: passages COPIED VERBATIM from the supplied text that a reader would
+want to meet again. A quote qualifies only if it is meaningfully revealing
+(a belief, a wound, a turning of the heart) OR beautifully written (striking
+language, a sentence that would stand on a sleep screen). Ordinary plot
+sentences, scene-setting, and functional dialogue do not qualify - do not
+pad the list with them.
+
+There is NO quota to fill. Zero is a valid answer when the text has nothing
+of that quality; a short or dry book may yield two or three, or none. Never
+more than 20 - that is a hard cap, not a target. Prefer a short list of
+lines that earn their place over a longer list that does not.
+
+Do not invent, paraphrase, translate, or trim words inside a quote - it must
+appear in the text exactly as written.
 For each quote:
   - quote: the exact passage, roughly 10-60 words, self-contained enough to
     stand without its surrounding context
@@ -315,9 +324,10 @@ gives you nothing:
 
 json_schema_quotes_only = [[
 REQUIRED JSON FORMAT - this is a QUOTES-ONLY run: emit exactly this shape and
-nothing else. An entry whose "chapter" you cannot read off a
-"=== CHAPTER n ===" marker must be left out entirely - the reader's app
-discards untagged quotes rather than risk showing one too early.
+nothing else. The array may be empty - a book with nothing worth quoting is
+a valid answer; do not invent a passage to avoid []. An entry whose "chapter"
+you cannot read off a "=== CHAPTER n ===" marker must be left out entirely -
+the reader's app discards untagged quotes rather than risk showing one too early.
 {
   "quotes": [
     { "quote": "verbatim passage from the text", "chapter": 1, "speaker": "" }

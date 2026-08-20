@@ -620,8 +620,10 @@ LLM.TEXT_END   = "<<<BOOK_TEXT_END>>>"
 --[[
 Assemble the prompt from the per-feature sections.
 
-context.book_text  chapter-marked text from lib/booktext (may be nil)
-context.truncated  true when the tail of the book was dropped
+context.book_text    chapter-marked text from lib/booktext (may be nil)
+context.truncated    true when the tail of the book was dropped
+context.quotes_only  quotes-only fetch (analysis exists, quotes do not)
+context.skip_quotes  re-analyse of an analysis that already has quotes
 ]]
 function LLM:createPrompt(title, author, context)
     if not self.prompts then self:loadLanguage() end
@@ -647,6 +649,13 @@ function LLM:createPrompt(title, author, context)
             p.json_schema_quotes_only,
         }
     else
+        --[[
+        Re-analyse of a book that already has quotes omits that section and
+        the schema key. runFetch copies the existing list onto the new
+        analysis after the reply; asking again spends output budget on a
+        rotation the reader already paid for. A first analysis, and an
+        analysis whose quotes list is still empty, still ask.
+        ]]
         parts = {
             p.system_instruction,
             string.format('Book: "%s"\nAuthor: %s', title or "Unknown", author or "Unknown"),
@@ -658,11 +667,21 @@ function LLM:createPrompt(title, author, context)
             p.section_merges,
             p.section_locations,
             p.section_themes,
-            p.section_quotes,
-            p.section_historical_figures,
-            string.format(p.section_author_bio, author or "Unknown"),
-            p.json_schema,
         }
+        if not context.skip_quotes then
+            parts[#parts + 1] = p.section_quotes
+        end
+        parts[#parts + 1] = p.section_historical_figures
+        parts[#parts + 1] = string.format(p.section_author_bio, author or "Unknown")
+        local schema = p.json_schema
+        if context.skip_quotes then
+            local block = '\n  "quotes": [\n    { "quote": "verbatim passage from the text", "chapter": 1, "speaker": "" }\n  ],'
+            local i, j = schema:find(block, 1, true)
+            if i then
+                schema = schema:sub(1, i - 1) .. schema:sub(j + 1)
+            end
+        end
+        parts[#parts + 1] = schema
     end
 
     -- Long books can ask for more per-chapter detail than the reply is allowed

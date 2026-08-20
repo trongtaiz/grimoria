@@ -514,6 +514,15 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
             last_chapter = meta and meta.last_chapter or nil,
         }
 
+        -- Re-analyse when quotes already exist: do not ask for them again.
+        -- The list is copied onto the new analysis after the reply, below.
+        -- A first analysis, and a legacy one with an empty quotes list, still
+        -- ask -- that is how those books get quotes without Extract quotes.
+        if self.book_data and type(self.book_data.quotes) == "table"
+            and #(self.book_data.quotes) > 0 then
+            context.skip_quotes = true
+        end
+
         --[[
         The request itself runs in a sub-process.
 
@@ -592,6 +601,19 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
             return
         end
     
+        -- Kept quotes from the analysis this run is replacing. Copied here
+        -- rather than sent to the model: skip_quotes dropped them from the
+        -- prompt, and the new version would otherwise ship with an empty list
+        -- (and light the Extract quotes button back up).
+        if context.skip_quotes and self.book_data
+            and type(self.book_data.quotes) == "table"
+            and #(self.book_data.quotes) > 0 then
+            logger.info("GrimoriaPlugin: keeping", #(self.book_data.quotes),
+                        "existing quotes on re-analyse")
+            book_data.quotes = self.book_data.quotes
+            book_data = self.llm:validateAndCleanData(book_data) or book_data
+        end
+
         -- Record what the analysis was built from, so a later reader can tell
         -- whether the tail of the book is missing from it.
         book_data.analyzed_chapters = meta and meta.chapters_included or nil

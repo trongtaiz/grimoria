@@ -104,6 +104,11 @@ happens, use **Menu → Grimoria → Analyse a chapter range…** and take the b
 two halves. The chapter numbers stay the book's own, so the halves filter by
 your reading position exactly like a full analysis.
 
+An analysis made before quotes existed can pick them up without a full
+re-analyse: **Menu → Grimoria → Extract quotes (AI)** patches the current
+version in place. Re-analysing a book that already has quotes keeps that list
+and spends the request on the rest of the index.
+
 ## Once it's analysed
 
 Everything below is local: no network, no cost, and it works with wifi off.
@@ -119,6 +124,10 @@ Everything below is local: no network, no cost, and it works with wifi off.
 - **The summary, themes and every card open as a full page** you can turn and
   close when you're done, with a heading per chapter — not a popup that
   disappears after fifteen seconds.
+- **Quotes** sit at the bottom of the summary: passages copied verbatim from
+  the text, only from chapters you have already finished. They are also written
+  to `<book>.sdr/grimoria_quotes.lua` for other KOReader patches (a sleep-screen
+  set lives in this repo under `patches/`).
 
 ## What it costs
 

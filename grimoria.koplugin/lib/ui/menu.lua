@@ -143,8 +143,9 @@ function GrimoriaPlugin:addToMainMenu(menu_items)
             {
                 -- Only lights up for an analysis made before the quotes field
                 -- existed: one cheap request adds the list without re-buying
-                -- the analysis. An analysis that has quotes hides it -- the
-                -- ordinary fetch already returns them.
+                -- the analysis. An analysis that has quotes hides it -- a
+                -- re-analyse then keeps the existing list rather than asking
+                -- again.
                 text = self.loc:t("menu_extract_quotes"),
                 keep_menu_open = true,
                 enabled_func = function()

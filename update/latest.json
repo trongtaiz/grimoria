@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Character intros were never displayed; the filter now delivers what the reader has earned.",
- "tag": "v3.2.2",
+ "notes": "Hold to delete an analysis works. Look up a name from the dictionary popup. TOC lists up to 100 chapters without grouping; names wait until the book prints them.",
+ "tag": "v3.3.0",
  "updater_version": 1,
- "version": "3.2.2"
+ "version": "3.3.0"
 }

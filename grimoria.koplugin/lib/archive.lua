@@ -411,6 +411,7 @@ function Archive:saveCache(book_path, data, meta)
         effort = meta.effort,
         label = meta.label,
         scope = meta.scope,
+        chapter_scheme = meta.chapter_scheme,
         created_at = data.cached_at,
     }
 

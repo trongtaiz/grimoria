@@ -1071,6 +1071,137 @@ do
     check(#thrice.characters[1].occupation == 1, "nor does a third")
 end
 
+--[[
+Rule 5: a name is earned when the book prints it.
+
+Synthetic book text only -- no quotations from any novel. The markers are
+the same shape lib/booktext.lua emits. scan() without book_text must keep
+doing what it did yesterday.
+]]
+print("\n=== a card cannot appear before the book prints its name ===")
+do
+    local SpoilerGuard = require("lib/spoilerguard")
+    local book = table.concat({
+        "=== CHAPTER 1: One ===\nA student named Mai opens the door.\n",
+        "=== CHAPTER 2: Two ===\nThe harbour master waves from the pier.\n",
+        "=== CHAPTER 9: Nine ===\nOnly here does the text print Bao Van.\n",
+    }, "")
+
+    local function tagged(name, at)
+        return LLM:validateAndCleanData({
+            book_title = "T", author = "A",
+            chapters = {
+                { index = 1, title = "One", summary = "", events = {} },
+                { index = 2, title = "Two", summary = "", events = {} },
+                { index = 9, title = "Nine", summary = "", events = {} },
+            },
+            characters = { { name = name, first_chapter = at, intro = "Someone.",
+                             by_chapter = {} } },
+            locations = {}, themes = {}, historical_figures = {},
+            identity_merges = {},
+        })
+    end
+
+    local early = tagged("Bao Van", 2)
+    local guarded, n = SpoilerGuard.scan(early, book)
+    check(n >= 1, "a name tagged before it is printed is pushed (" .. n .. ")")
+    check(guarded.characters[1].first_chapter == 9,
+          "Bao Van moves 2 -> 9 (got " .. tostring(guarded.characters[1].first_chapter) .. ")")
+
+    local again, n2 = SpoilerGuard.scan(guarded, book)
+    check(n2 == 0 and again.characters[1].first_chapter == 9,
+          "a second pass is a no-op")
+
+    local ok = tagged("Mai", 1)
+    local g2, n3 = SpoilerGuard.scan(ok, book)
+    check(n3 == 0 and g2.characters[1].first_chapter == 1,
+          "a name printed in chapter 1 is left alone")
+
+    local ghost = tagged("the figure in the coat", 1)
+    local g3, n4 = SpoilerGuard.scan(ghost, book)
+    check(n4 == 0 and g3.characters[1].first_chapter == 1,
+          "a descriptor that never occurs in the text is NOT buried at end-of-book")
+
+    local no_text = tagged("Bao Van", 2)
+    local g4, n5 = SpoilerGuard.scan(no_text)
+    check(n5 == 0 and g4.characters[1].first_chapter == 2,
+          "without book_text, rule 5 does not run (cache-load shape)")
+end
+
+print("\n=== rule 5 on the reported cache, if the fixture is present ===")
+do
+    -- plugin_dir is the plugin folder; private/ sits next to it at the repo root.
+    local cache_path = plugin_dir .. "/../private/fixtures/"
+        .. "grimoria_cache_1786908838_google-gemini-3-7-flash.lua"
+    local epub_path = plugin_dir .. "/../private/fixtures/"
+        .. "Đầu Voi - Bản dịch mới v2.epub"
+    local extract = plugin_dir .. "/test/extract_epub.py"
+    local tmp = os.tmpname()
+    local have_cache = io.open(cache_path, "r")
+    local have_epub = io.open(epub_path, "r")
+    if have_cache then have_cache:close() end
+    if have_epub then have_epub:close() end
+    if not have_cache or not have_epub then
+        print("  SKIP  reported cache or epub not in private/fixtures/")
+    else
+        -- Pair-bucketing (scheme 1) matches this cache's 32 chapters.
+        -- This cache was numbered under the old ceiling of 60 (32 pairs).
+        local cmd = string.format('python3 %q %q %q --scheme 1 --max-chapters 60',
+                                  extract, epub_path, tmp)
+        local ok_py = os.execute(cmd)
+        local fh = io.open(tmp, "r")
+        local book = fh and fh:read("*a") or ""
+        if fh then fh:close() end
+        os.remove(tmp)
+        -- os.execute returns true/256-ish depending on Lua; treat empty extract as skip.
+        if type(book) ~= "string" or #book < 1000 then
+            print("  SKIP  extract_epub.py did not produce text (got "
+                  .. tostring(ok_py) .. ", " .. tostring(book and #book) .. " chars)")
+        else
+            local chunk = assert(loadfile(cache_path))
+            local data = chunk()
+            local function fc(name)
+                for _, c in ipairs(data.characters or {}) do
+                    if c.name == name then return tonumber(c.first_chapter) end
+                end
+            end
+            local haru_before, izumi_before = fc("Kagami Haru"), fc("Izumi Saki")
+            local SpoilerGuard = require("lib/spoilerguard")
+            SpoilerGuard.scan(data, book)
+            local haru, izumi = fc("Kagami Haru"), fc("Izumi Saki")
+            check(haru_before == 7 and haru == 9,
+                  "Kagami Haru 7 -> 9 (was " .. tostring(haru_before)
+                  .. ", now " .. tostring(haru) .. ")")
+            check(izumi_before == 2 and izumi == 4,
+                  "Izumi Saki 2 -> 4 (was " .. tostring(izumi_before)
+                  .. ", now " .. tostring(izumi) .. ")")
+            local pushed, untouched, buried = 0, 0, 0
+            local last = 1
+            for _, ch in ipairs(data.chapters or {}) do
+                last = math.max(last, tonumber(ch.index) or 1)
+            end
+            -- Re-load originals to count.
+            local orig = assert(loadfile(cache_path))()
+            local orig_at = {}
+            for _, c in ipairs(orig.characters or {}) do
+                orig_at[c.name] = tonumber(c.first_chapter)
+            end
+            for _, c in ipairs(data.characters or {}) do
+                local a, b = orig_at[c.name], tonumber(c.first_chapter)
+                if a and b and b > a then
+                    pushed = pushed + 1
+                    if b >= last then buried = buried + 1 end
+                else
+                    untouched = untouched + 1
+                end
+            end
+            check(untouched == 17, "17 of 22 cards untouched (got " .. untouched .. ")")
+            check(pushed == 5, "5 cards pushed later (got " .. pushed .. ")")
+            check(buried == 0, "nothing pushed to end-of-book (got " .. buried .. ")")
+        end
+    end
+end
+
 -- ---------------------------------------------------------- the real reply --
 
 if reply_file then

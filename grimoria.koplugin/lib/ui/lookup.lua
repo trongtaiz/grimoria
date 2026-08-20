@@ -104,6 +104,42 @@ function GrimoriaPlugin:registerHighlightLookup()
     else
         logger.warn("GrimoriaPlugin: could not add the highlight entry:", err)
     end
+
+    -- A long-press on a single word opens the dictionary popup, not the
+    -- highlight dialog (KOReader setting "Dictionary on single word
+    -- selection", on by default). Without this button, hold-on-name never
+    -- reaches Grimoria. addToDictButtons is a newer host API; older
+    -- KOReader builds just skip it.
+    if self._dict_registered then return end
+    if not (self.ui and self.ui.dictionary and self.ui.dictionary.addToDictButtons) then
+        return
+    end
+    local dok, derr = pcall(function()
+        self.ui.dictionary:addToDictButtons({
+            id = "grimoria_lookup",
+            menu_text = self.loc:t("lookup_in_grimoria"),
+            text = self.loc:t("lookup_in_grimoria"),
+            insert_first = true,
+            show_func = function()
+                return self.book_data ~= nil
+            end,
+            callback = function(dict_popup)
+                local word = dict_popup
+                    and (dict_popup.word or dict_popup.lookupword)
+                pcall(function()
+                    if dict_popup and dict_popup.onClose then
+                        dict_popup:onClose()
+                    end
+                end)
+                self:lookupInGrimoria(word)
+            end,
+        })
+    end)
+    if dok then
+        self._dict_registered = true
+    else
+        logger.warn("GrimoriaPlugin: could not add the dictionary button:", derr)
+    end
 end
 
 --[[

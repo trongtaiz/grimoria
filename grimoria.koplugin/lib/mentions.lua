@@ -25,7 +25,7 @@ function Mentions:new(o)
 end
 
 -- Text of the chapter the reader is currently in, or nil.
-function Mentions:getCurrentChapterText(ui)
+function Mentions:getCurrentChapterText(ui, scheme)
     if not ui or not ui.document then
         logger.warn("Mentions: No document available")
         return nil
@@ -33,14 +33,14 @@ function Mentions:getCurrentChapterText(ui)
 
     local doc = ui.document
     local paged = doc.info and doc.info.has_pages
-    local index = BookText:getCurrentChapterIndex(ui) or 1
+    local index = BookText:getCurrentChapterIndex(ui, scheme) or 1
 
     local ok, text = pcall(function()
         -- Must come from the extractor's canonical list, not a fresh read of
         -- getToc(): on books with a large TOC that list is grouped into
         -- buckets, and getCurrentChapterIndex counts buckets. Indexing raw TOC
         -- entries with a bucket number would silently return another chapter.
-        local chapters = BookText:getChapterList(ui)
+        local chapters = BookText:getChapterList(ui, scheme)
 
         if #chapters == 0 then
             if paged then
@@ -245,7 +245,7 @@ plugin has no reason to take. Every call that can actually fail (building the
 chapter list, reading a chapter's text) carries its own pcall instead, and the
 rest of the loop is arithmetic over strings.
 ]]
-function Mentions:scan(ui, characters, up_to, progress)
+function Mentions:scan(ui, characters, up_to, progress, scheme)
     if not ui or not ui.document then return nil, "no_document" end
     if type(up_to) ~= "number" or up_to < 1 then return {} end
 
@@ -266,7 +266,9 @@ function Mentions:scan(ui, characters, up_to, progress)
     local spellings = {}
     for i, c in ipairs(characters) do spellings[i] = self:spellingsOf(c) end
 
-    local ok_list, chapters = pcall(function() return BookText:getChapterList(ui) end)
+    local ok_list, chapters = pcall(function()
+        return BookText:getChapterList(ui, scheme)
+    end)
     if not ok_list or type(chapters) ~= "table" then
         logger.warn("Mentions: could not build the chapter list:", chapters)
         restore()

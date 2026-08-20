@@ -500,7 +500,7 @@ function GrimoriaPlugin:applyChapterFilter()
     local limit = nil
     if has_chapter_data and not self.show_whole_book then
         local BookText = require("lib/booktext")
-        local here = BookText:getCurrentChapterIndex(self.ui)
+        local here = BookText:getCurrentChapterIndex(self.ui, self:chapterScheme())
         if not here then
             limit = previous or 0
             logger.warn("Grimoria: current chapter did not resolve; filtering at",
@@ -632,6 +632,22 @@ Cached on the instance because applyChapterFilter runs before EVERY view, and
 re-reading a file from a Kindle's flash on each menu open is a real cost for a
 value that cannot change while the plugin is loaded.
 ]]
+--[[
+Which chapter-list scheme this analysis was numbered against.
+
+Stored on analysis_meta at fetch. Absent (every cache written before scheme
+2) means scheme 1 -- today's pair-bucketing. Defaulting the other way, to
+2, on an old 32-chapter analysis would count `here` on the 13-chapter list
+and leak: scheme 1 on a scheme-2 file hides extra (fail closed); scheme 2
+on a scheme-1 file shows too much.
+]]
+function GrimoriaPlugin:chapterScheme()
+    local meta = self.book_data and self.book_data.analysis_meta
+    local s = type(meta) == "table" and tonumber(meta.chapter_scheme) or nil
+    if s == 1 or s == 2 then return s end
+    return 1
+end
+
 function GrimoriaPlugin:spoilerIncludesCurrentChapter()
     if self._include_current_chapter == nil then
         local ok, v = pcall(function()

@@ -25,7 +25,7 @@ of things it moved.
 
 WHAT THIS DOES
 
-Two rules, both applied by moving text LATER rather than deleting it:
+Rules, all applied by moving text LATER rather than deleting it:
 
   1. IDENTITY. A character who is a member of an identity_merge must not name
      another member of that merge before the chapter the book itself makes the
@@ -45,6 +45,23 @@ Two rules, both applied by moving text LATER rather than deleting it:
      over a hidden identity, and it is checked by comparing names rather than
      by searching text, so it neither misses nor false-positives.
 
+  5. A NAME IS EARNED WHEN THE BOOK PRINTS IT. Rules 1-3 key on the model's
+     own first_chapter. That is luck: the same prompt, the same book, one run
+     split a disguise into two identities and the next stuffed the reveal
+     into one card tagged at the disguise scene. When the extracted book
+     text is in hand, a card cannot appear before the chapter where its own
+     name is first printed -- whole-word, same matcher as rule 2, never
+     pulled earlier, fail-open if the name never occurs (a descriptor card
+     or a spelling the model invented must not be buried at end-of-book).
+     Locations and identity_merges.chapter get the same push.
+
+     This is the first rule here grounded in the book rather than in the
+     model's declarations. It needs the text, so it runs at fetch (the
+     parent still has the extract) and is skipped on cache load --
+     Archive:normalise has no book. The pushed first_chapter is what gets
+     saved, so later loads see it without the text. An analysis stored
+     before this rule does not get it retroactively.
+
 Re-tag, never delete: the model's sentence is usually correct and useful, it
 is simply timed wrongly, and a reader who reaches the reveal should get the
 whole card. Deleting would also make the guard destructive on a false
@@ -56,7 +73,9 @@ WHAT THIS CANNOT DO, stated plainly rather than implied
 It matches NAMES. A semantic leak carrying no name -- "he would come to regret
 this", a theme phrased as a hint, a summary that foreshadows in the abstract --
 is invisible here, and stays the responsibility of the prompt's per-chapter
-discipline. This module narrows the hole; it does not close it.
+discipline. Rule 5 only delays a card until its own name is printed; it does
+not split one entry into two identities, and it does not run without the
+book text. This module narrows the hole; it does not close it.
 
 MATCHING IS WHOLE-WORD, CASE-INSENSITIVE, AND NOT DIACRITIC-FOLDED
 
@@ -125,25 +144,148 @@ function SpoilerGuard.mentions(haystack, needle)
     end
 end
 
+--[[
+Byte offset of the first whole-word hit of `needle` in an already-folded
+haystack, or nil. Same boundary and length floor as mentions(); separated
+so rule 5 can map the hit onto a chapter without scanning twice.
+]]
+function SpoilerGuard.firstMentionPos(haystack_folded, needle)
+    local n = SpoilerGuard.fold(needle)
+    if #n < 3 or not haystack_folded or #haystack_folded == 0 then return nil end
+    local from = 1
+    while true do
+        local s, e = haystack_folded:find(n, from, true)
+        if not s then return nil end
+        local before = s > 1 and haystack_folded:sub(s - 1, s - 1) or " "
+        local after = e < #haystack_folded
+            and haystack_folded:sub(e + 1, e + 1) or " "
+        if not before:match("%w") and not after:match("%w") then return s end
+        from = s + 1
+    end
+end
+
 local function toInt(v, d)
     local n = tonumber(v)
     return (n and n >= 1) and math.floor(n) or d
 end
 
 --[[
-Run both rules over one analysis, in place.
+Offsets of every "=== CHAPTER n ===" marker in folded book text.
+
+One pass, numbers only -- never a slice of the book. Rule 5 maps a byte
+position onto the last marker that started at or before it.
+]]
+local function chapterOffsets(folded)
+    local offs = {}
+    local from = 1
+    while true do
+        local s, e, n = folded:find("=== chapter (%d+)", from, false)
+        if not s then break end
+        offs[#offs + 1] = { index = tonumber(n), at = s }
+        from = e + 1
+    end
+    return offs
+end
+
+local function chapterAt(offs, pos)
+    local found = nil
+    for i = 1, #offs do
+        if offs[i].at <= pos then found = offs[i].index else break end
+    end
+    return found
+end
+
+--[[
+Rule 5. Push first_chapter (and merge.chapter) forward to where the book
+itself first prints that name. Returns how many fields moved.
+
+`book_text` is folded once. Kindles have little RAM; this is one extra
+string the size of the extract, live only for this pass, at fetch, never
+on a menu tap.
+]]
+local function groundToText(data, book_text)
+    local folded = SpoilerGuard.fold(book_text)
+    local offs = chapterOffsets(folded)
+    if #offs == 0 then return 0 end
+
+    local moved = 0
+    local function printedChapter(name)
+        local pos = SpoilerGuard.firstMentionPos(folded, name)
+        if not pos then return nil end
+        return chapterAt(offs, pos)
+    end
+
+    local function pushField(tbl, key, name)
+        local n = printedChapter(name)
+        if not n then return end
+        local now = toInt(tbl[key], 1)
+        if n > now then
+            tbl[key] = n
+            moved = moved + 1
+            logger.info("SpoilerGuard: name", tostring(name),
+                        "first printed at ch", n, "-- held back from ch", now)
+        end
+    end
+
+    for _, c in ipairs(data.characters or {}) do
+        if type(c) == "table" and type(c.name) == "string" then
+            pushField(c, "first_chapter", c.name)
+        end
+    end
+    for _, l in ipairs(data.locations or {}) do
+        if type(l) == "table" and type(l.name) == "string" then
+            pushField(l, "first_chapter", l.name)
+        end
+    end
+    for _, m in ipairs(data.identity_merges or {}) do
+        if type(m) == "table" and type(m.names) == "table" then
+            -- The merge is earned when the LAST of its names is printed --
+            -- that is the chapter the text can actually make the connection.
+            local latest = nil
+            for _, n in ipairs(m.names) do
+                if type(n) == "string" then
+                    local at = printedChapter(n)
+                    if at and (not latest or at > latest) then latest = at end
+                end
+            end
+            if latest then
+                local now = toInt(m.chapter, 1)
+                if latest > now then
+                    m.chapter = latest
+                    moved = moved + 1
+                    logger.info("SpoilerGuard: merge held back from ch", now,
+                                "to ch", latest)
+                end
+            end
+        end
+    end
+    return moved
+end
+
+--[[
+Run the rules over one analysis, in place.
+
+`book_text` is optional. Without it, rule 5 is skipped -- that is how
+cache load looks, and how every existing call site looks. With it (fetch,
+parent process, extract still in scope), a card cannot appear before the
+book prints its name.
 
 Returns the analysis and the number of fields re-tagged, so the caller can log
 it. Deliberately tolerant of shapes it does not recognise: this runs on every
 analysis ever stored, including ones written years before it existed, and a
 guard that errors on an unfamiliar payload would make that analysis unopenable.
 ]]
-function SpoilerGuard.scan(data)
+function SpoilerGuard.scan(data, book_text)
     if type(data) ~= "table" then return data, 0 end
 
     local last = 1
     for i, ch in ipairs(data.chapters or {}) do
         if type(ch) == "table" then last = math.max(last, toInt(ch.index, i), i) end
+    end
+
+    local retagged = 0
+    if type(book_text) == "string" and #book_text > 0 then
+        retagged = retagged + groundToText(data, book_text)
     end
 
     --[[
@@ -194,7 +336,7 @@ function SpoilerGuard.scan(data)
         if type(l) == "table" then note(l.name, l.first_chapter) end
     end
 
-    local retagged = 0
+    -- retagged already counts rule-5 pushes, if any.
 
     --[[
     RULE 3, applied first because it decides which alias spellings count as

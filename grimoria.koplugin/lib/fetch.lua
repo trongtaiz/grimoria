@@ -187,6 +187,12 @@ function GrimoriaPlugin:askSpoilerPreference()
     if #existing > 0 then
         note = "\n\n" .. string.format(self.loc:t("confirm_extra_analysis"), #existing)
     end
+    -- The reply budget is 65,536 tokens shared with thinking. A long TOC
+    -- asks for one summary per entry; past ~40 that is the thing that
+    -- gets truncated, not the book text. The range picker is the way out.
+    if chapters > 40 then
+        note = note .. "\n\n" .. string.format(self.loc:t("confirm_long_toc"), chapters)
+    end
 
     UIManager:show(ConfirmBox:new{
         text = string.format(self.loc:t("confirm_full_fetch"), chapters, est_k) .. note,
@@ -608,7 +614,10 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
         ]]
         local guard_ok, retagged = pcall(function()
             local SpoilerGuard = require("lib/spoilerguard")
-            local _, n = SpoilerGuard.scan(book_data)
+            -- book_text is still in scope here, in the parent. Rule 5 (a
+            -- name is earned when the book prints it) needs it; cache load
+            -- does not have it and skips that rule on purpose.
+            local _, n = SpoilerGuard.scan(book_data, book_text)
             return n
         end)
         if guard_ok then
@@ -643,6 +652,7 @@ function GrimoriaPlugin:runFetch(book_path, title, author, selected_provider,
             effort = provider_config and provider_config.reasoning_effort or nil,
             scope = (meta and meta.first_chapter)
                 and { first = meta.first_chapter, last = meta.last_chapter } or nil,
+            chapter_scheme = meta and meta.scheme or nil,
         })
         
         local cache_msg = cache_saved and self.loc:t("cache_saved") or self.loc:t("cache_save_failed")

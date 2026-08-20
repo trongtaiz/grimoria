@@ -711,6 +711,9 @@ msgstr "Phân tích"
 msgid "confirm_extra_analysis"
 msgstr "Sách này đã có %d bản phân tích được lưu.\nBản cũ vẫn được giữ — bạn có thể chuyển lại sau."
 
+msgid "confirm_long_toc"
+msgstr "Mục lục sách này có %d mục. Câu trả lời của AI có kích thước cố định, nên danh sách chương quá dài có thể bị cắt. Nếu bị cắt, hãy phân tích theo khoảng chương."
+
 msgid "stage_extracting"
 msgstr "📖 Đang đọc nội dung sách từ thiết bị..."
 

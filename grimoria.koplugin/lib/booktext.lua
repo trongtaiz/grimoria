@@ -41,12 +41,32 @@ MAX_CHARS.
 ]]
 BookText.MAX_CHARS_DEFAULT = 1000000
 
+-- How a too-long TOC is reduced to at most MAX_CHAPTERS.
+--
+-- Scheme 1 is today's behaviour: consecutive pair-bucketing. Every analysis
+-- stored before scheme 2 exists was numbered that way, and the filter must
+-- keep using it for those files.
+--
+-- Scheme 2 (current): when the raw TOC exceeds MAX_CHAPTERS (100), try (a) nested
+-- TOC depth, then (b) consecutive entries that share a DocFragment / spine
+-- file, then (c) pair-bucketing as last resort. Frozen once shipped; a later
+-- grouping change is scheme 3. Callers that number an analysis pass the
+-- scheme that analysis was built with; extract of a new run uses this
+-- constant.
+BookText.CHAPTER_SCHEME = 2
+
 -- Above this many TOC entries, consecutive ones are grouped into buckets.
 -- Ebook tables of contents are wildly inconsistent -- Dau Voi's 13 printed
 -- chapters appear as 63 TOC entries on-device because sub-sections are listed
 -- too. Without a ceiling, a long book asks the model for hundreds of
 -- per-chapter entries and the reply is truncated.
-BookText.MAX_CHAPTERS = 60
+-- Ceiling on how many TOC entries we send as separate chapters. Above this,
+-- consecutive entries are grouped (scheme 1: pairs; scheme 2: spine file /
+-- TOC depth). 100 keeps a typical novel's subsection TOC intact -- Đầu Voi
+-- has 63 entries -- while still capping books that list every scene heading.
+-- A long list still shares the 65,536-token reply with thinking, so the fetch
+-- confirm warns when the count is high.
+BookText.MAX_CHAPTERS = 100
 
 -- Rough ceiling on how many by_chapter entries the model should emit in total,
 -- derived from the output budget: 65,536 minus ~20k thinking and ~10k for
@@ -119,7 +139,9 @@ local function getEpubChapters(doc)
     local entries = {}
     for _, e in ipairs(toc) do
         if e.xpointer then
-            entries[#entries + 1] = { title = e.title, xpointer = e.xpointer }
+            entries[#entries + 1] = {
+                title = e.title, xpointer = e.xpointer, depth = e.depth,
+            }
         end
     end
 
@@ -131,9 +153,10 @@ local function getEpubChapters(doc)
     local chapters = {}
     for i, e in ipairs(entries) do
         chapters[#chapters + 1] = {
-            title   = e.title,
+            title    = e.title,
             xp_start = e.xpointer,
             xp_end   = entries[i + 1] and entries[i + 1].xpointer or doc_end,
+            depth    = e.depth,
         }
     end
 
@@ -149,7 +172,9 @@ local function getPdfChapters(doc)
 
     local entries = {}
     for _, e in ipairs(toc) do
-        if e.page then entries[#entries + 1] = { title = e.title, page = e.page } end
+        if e.page then
+            entries[#entries + 1] = { title = e.title, page = e.page, depth = e.depth }
+        end
     end
 
     if #entries == 0 then
@@ -162,10 +187,93 @@ local function getPdfChapters(doc)
         if next_page >= e.page then
             chapters[#chapters + 1] = {
                 title = e.title, page_start = e.page, page_end = next_page,
+                depth = e.depth,
             }
         end
     end
     return chapters
+end
+
+local function mergeRange(raw, first_i, last_i, paged)
+    local first, last = raw[first_i], raw[last_i]
+    local title = first.title or ("Chapter " .. first_i)
+    if last ~= first and last.title and last.title ~= first.title then
+        title = title .. " – " .. last.title
+    end
+    if paged then
+        return { title = title,
+                 page_start = first.page_start, page_end = last.page_end }
+    end
+    return { title = title, xp_start = first.xp_start, xp_end = last.xp_end }
+end
+
+local function pairBucket(raw, paged, max_chapters)
+    local per = math.ceil(#raw / max_chapters)
+    local out = {}
+    for i = 1, #raw, per do
+        out[#out + 1] = mergeRange(raw, i, math.min(i + per - 1, #raw), paged)
+    end
+    return out
+end
+
+-- Nested TOC: keep only the shallowest depth that actually has children.
+local function groupByDepth(raw, paged)
+    local min_d, varied = nil, false
+    for _, ch in ipairs(raw) do
+        local d = tonumber(ch.depth)
+        if d then
+            if min_d == nil then
+                min_d = d
+            elseif d < min_d then
+                min_d, varied = d, true
+            elseif d > min_d then
+                varied = true
+            end
+        end
+    end
+    if not varied or min_d == nil then return nil end
+    local heads = {}
+    for i, ch in ipairs(raw) do
+        if (tonumber(ch.depth) or (min_d + 1)) == min_d then
+            heads[#heads + 1] = i
+        end
+    end
+    if #heads < 2 or #heads == #raw then return nil end
+    local out = {}
+    for i, hi in ipairs(heads) do
+        local last = heads[i + 1] and (heads[i + 1] - 1) or #raw
+        out[#out + 1] = mergeRange(raw, hi, last, paged)
+    end
+    return out
+end
+
+local function fragmentId(ch)
+    local xp = ch.xp_start
+    if type(xp) ~= "string" then return nil end
+    return tonumber(xp:match("DocFragment%[(%d+)%]"))
+end
+
+-- Consecutive TOC entries that share a crengine DocFragment (one spine HTML
+-- file, in practice one printed chapter on Calibre-split EPUBs).
+local function groupByFragment(raw, paged)
+    if paged then return nil end
+    local any = false
+    for _, ch in ipairs(raw) do
+        if fragmentId(ch) then any = true; break end
+    end
+    if not any then return nil end
+    local out = {}
+    local run_start = 1
+    local run_id = fragmentId(raw[1])
+    for i = 2, #raw + 1 do
+        local id = raw[i] and fragmentId(raw[i])
+        if i > #raw or id ~= run_id then
+            out[#out + 1] = mergeRange(raw, run_start, i - 1, paged)
+            run_start, run_id = i, id
+        end
+    end
+    if #out < 2 or #out == #raw then return nil end
+    return out
 end
 
 --[[
@@ -173,47 +281,61 @@ THE canonical chapter list. Everything -- extraction, the AI's chapter
 numbering, and the reading-position filter -- must agree on what "chapter 12"
 means, so all of them come through here and nowhere else.
 
-Books whose TOC exceeds MAX_CHAPTERS get consecutive entries grouped into
-buckets. The grouping is deterministic (same input, same buckets), which is
-what keeps the filter aligned with the analysis.
+`scheme` selects how a TOC longer than MAX_CHAPTERS is reduced. It is a
+forever-contract: scheme 1 is pair-bucketing (every analysis stored before
+scheme 2); scheme 2 is depth, then DocFragment, then pairs. Passing the
+wrong scheme against a stored analysis numbers the book differently from
+the tags in that analysis -- scheme 1 on a scheme-2 file leaks, scheme 2
+on a scheme-1 file hides extra. Callers that filter a stored analysis MUST
+pass the scheme that analysis recorded.
+
+Books whose raw TOC is already <= MAX_CHAPTERS are identical under every
+scheme (no grouping).
 ]]
-function BookText:getChapterList(ui)
+function BookText:getChapterList(ui, scheme)
     local doc = ui.document
     local paged = isPaged(ui)
+    scheme = tonumber(scheme) or self.CHAPTER_SCHEME
+    if scheme ~= 1 and scheme ~= 2 then scheme = self.CHAPTER_SCHEME end
 
     -- Building the EPUB list moves the document to find its bounds, and the
-    -- filter asks for this every time a view opens. Cache per book so that
-    -- happens once, not on every menu tap.
-    if self._cache and self._cache.file == doc.file then
-        return self._cache.list, self._cache.grouped
+    -- filter asks for this every time a view opens. Cache per book AND scheme
+    -- so a reader switching versions (scheme 1 vs 2) does not get the other
+    -- numbering.
+    if self._cache and self._cache.file == doc.file
+        and self._cache.scheme == scheme then
+        return self._cache.list, self._cache.grouped, self._cache.how
     end
 
     local raw = paged and getPdfChapters(doc) or getEpubChapters(doc)
 
     if #raw <= self.MAX_CHAPTERS then
-        self._cache = { file = doc.file, list = raw, grouped = false }
-        return raw, false
+        self._cache = { file = doc.file, scheme = scheme,
+                        list = raw, grouped = false, how = "none" }
+        return raw, false, "none"
     end
 
-    local per = math.ceil(#raw / self.MAX_CHAPTERS)
-    local out = {}
-    for i = 1, #raw, per do
-        local first, last = raw[i], raw[math.min(i + per - 1, #raw)]
-        local title = first.title or ("Chapter " .. #out + 1)
-        if last ~= first and last.title and last.title ~= first.title then
-            title = title .. " – " .. last.title
+    local out, how
+    if scheme == 1 then
+        out, how = pairBucket(raw, paged, self.MAX_CHAPTERS), "pairs"
+    else
+        out = groupByDepth(raw, paged)
+        how = out and "depth" or nil
+        if not out then
+            out = groupByFragment(raw, paged)
+            how = out and "fragments" or nil
         end
-        if paged then
-            out[#out + 1] = { title = title,
-                              page_start = first.page_start, page_end = last.page_end }
-        else
-            out[#out + 1] = { title = title,
-                              xp_start = first.xp_start, xp_end = last.xp_end }
+        if not out or #out > self.MAX_CHAPTERS then
+            out = pairBucket(out or raw, paged, self.MAX_CHAPTERS)
+            how = "pairs"
         end
     end
-    logger.info("BookText: grouped", #raw, "TOC entries into", #out, "chapters")
-    self._cache = { file = doc.file, list = out, grouped = true }
-    return out, true
+
+    logger.info("BookText: scheme", scheme, "grouped", #raw, "TOC entries into",
+                #out, "via", how)
+    self._cache = { file = doc.file, scheme = scheme,
+                    list = out, grouped = true, how = how }
+    return out, true, how
 end
 
 -- ----------------------------------------------------------- current spot --
@@ -221,12 +343,12 @@ end
 -- Which chapter is the reader in right now? Drives the spoiler filter, so it
 -- runs every time a view opens - it must stay cheap and must not move the
 -- document.
-function BookText:getCurrentChapterIndex(ui)
+function BookText:getCurrentChapterIndex(ui, scheme)
     local ok, idx = pcall(function()
         local doc = ui.document
         -- Same list the analysis was numbered against -- crucially including
         -- any bucketing, or the filter would point at the wrong chapter.
-        local chapters = self:getChapterList(ui)
+        local chapters = self:getChapterList(ui, scheme)
         if #chapters == 0 then return 1 end
 
         if isPaged(ui) then
@@ -261,8 +383,8 @@ function BookText:getCurrentChapterIndex(ui)
 end
 
 -- How many chapters this book has, after any grouping.
-function BookText:getChapterCount(ui)
-    local ok, n = pcall(function() return #(self:getChapterList(ui)) end)
+function BookText:getChapterCount(ui, scheme)
+    local ok, n = pcall(function() return #(self:getChapterList(ui, scheme)) end)
     return (ok and n and n > 0) and n or 1
 end
 
@@ -314,7 +436,8 @@ function BookText:extract(ui, opts)
     end
 
     local ok, text, meta = pcall(function()
-        local chapters, grouped = self:getChapterList(ui)
+        local scheme = tonumber(opts.scheme) or self.CHAPTER_SCHEME
+        local chapters, grouped, how = self:getChapterList(ui, scheme)
         local buf, total = {}, 0
         local included, truncated = 0, false
         local titles = {}
@@ -379,6 +502,8 @@ function BookText:extract(ui, opts)
             truncated         = truncated,
             chapter_titles    = titles,
             grouped           = grouped,
+            grouped_how       = how,
+            scheme            = scheme,
             -- Absolute, and only set when this was a section run: the prompt
             -- has to state the range, and the version picker records it.
             first_chapter     = (from > 1 or to < #chapters) and from or nil,

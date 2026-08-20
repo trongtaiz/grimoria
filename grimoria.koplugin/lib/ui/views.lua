@@ -135,6 +135,14 @@ function GrimoriaPlugin:showCharacters()
         title_bar_fm_style = true,
         width = Screen:getWidth(),
         height = Screen:getHeight(),
+        -- Stock Menu:onMenuHold ignores item.hold_callback.
+        onMenuHold = function(_, item)
+            if item and item.hold_callback then
+                item.hold_callback()
+                return true
+            end
+            return true
+        end,
     }
     
     UIManager:show(character_menu)
@@ -565,7 +573,8 @@ function GrimoriaPlugin:showChapterCharacters()
         timeout = 1,
     })
     
-    local chapter_text, chapter_title = self.mentions:getCurrentChapterText(self.ui)
+    local chapter_text, chapter_title =
+        self.mentions:getCurrentChapterText(self.ui, self:chapterScheme())
     
     if not chapter_text or #chapter_text == 0 then
         UIManager:show(InfoMessage:new{

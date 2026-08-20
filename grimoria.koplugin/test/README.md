@@ -107,7 +107,7 @@ fixture is built by `make_legacy_fixture.py` because pure Lua cannot create a
 directory; the files in it are empty markers and a placeholder key, since the
 test only ever asks which path gets opened.
 
-`test_wiring.lua` loads the plugin and asserts all 95 methods are present after
+`test_wiring.lua` loads the plugin and asserts all 96 methods are present after
 the ten `lib/` modules are mixed onto the class. Without it, a module left
 off the mixin list loads perfectly and then fails with "attempt to call a nil
 value" the first time someone opens that menu.
@@ -279,6 +279,60 @@ The 0–0 leak comparison is weak evidence on its own — seven early chapters o
 mystery have little to give away, which is why the whole-book flow also scored
 0. The decisive case is the identity reveal at chapter 47, and it is exactly
 what the free tier refused to run.
+
+### The paid run: both flows, all 56 chapters, `openai/gpt-5.6-luna`
+
+Everything above is superseded by a complete measurement of both flows on one
+capable model. Nothing here is projected.
+
+| | whole-book | multiturn |
+|---|---|---|
+| requests | 1 | 56 |
+| tokens | 109,353 in / 14,188 out | 594,663 in / 162,138 out |
+| **billed** | **$0.0222** | **$0.2057 — 9.3×** |
+| wall clock | 1.7 min | 23.0 min |
+| characters found | 19 | 51 |
+| raw leaks written by the model | 8 | **1,050** |
+| leaks surviving `spoilerguard` | **0** | **469** |
+| the book's central reveal | **found** (ch47, Van = Morisu Kyoichi) | **missed** |
+
+The cost result was expected. The quality result was not, and it is the reason
+this experiment is closed rather than parked.
+
+**Multiturn leaks two orders of magnitude more, and the guard cannot save it.**
+The cause is not the model writing spoilers — it is **identity fragmentation**.
+A turn sees only its own chapter plus a roster of names, so it cannot recognise
+someone it last saw forty chapters ago, and it opens a new entry instead. The
+merged analysis holds `Nakamura Kojiro [ch56]` where the whole-book pass has him
+at ch9, `Morisu [ch56]` beside `Morisu Kyoichi [ch11]`, `Higashi [ch56]` /
+`Higashi Hajime [ch48]` / `Hajime [ch8]` for one person, and thirty-odd bare
+descriptors promoted to characters ("cô", "cậu", "viên thanh tra", "chị giúp
+việc"). Every early mention of a person the merge re-dated to chapter 56 then
+reads as text naming someone unmet — which is what the 469 are.
+
+That mis-dating is also a reader-facing bug in its own right, and the worse one:
+a character who appears in chapter 9 stays hidden until chapter 56.
+
+**And it missed the twist.** The whole-book pass records
+`ch47 Van (Morisu Kyoichi)`. The multiturn pass has no such merge anywhere; its
+closest entry is `ch51 Morisu (cậu)` — a fragment name fused with a pronoun.
+Chapter 47's own text is where the connection is made, and a turn holding only
+chapter 47 plus a name list has no way to feel the weight of it. The one thing
+the whole-book request is uniquely good at is exactly the thing the plugin
+exists for.
+
+**A fair caveat.** This refutes multiturn *with a lean state* (summaries plus a
+name/role roster). A richer state — full descriptions, prior `by_chapter`
+history — would fragment less. It would also raise the input cost that is
+already 5.4× the whole-book flow's, since that state is re-sent every turn. The
+cheap version fails on quality; the accurate version fails harder on cost.
+
+Two robustness findings worth keeping, both arguments for the fail-closed
+rebuild in `lib/llm.lua`: luna returned `chapters: [{...}, "aliases_note"]` —
+a bare string in an array of objects — on turn 37 of 56, and invented 6
+identity merges naming characters it never listed on the whole-book pass. The
+shipped `validateAndCleanData` type-checks both away. A 56-request flow gets 56
+chances to hit them.
 
 ## The fixture
 

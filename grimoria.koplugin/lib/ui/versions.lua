@@ -197,6 +197,15 @@ function GrimoriaPlugin:showVersionPicker()
         title_bar_fm_style = true,
         width = Screen:getWidth(),
         height = Screen:getHeight(),
+        -- KOReader's Menu:onMenuHold is a no-op. Without this, hold_callback
+        -- on an item is never invoked -- hold-to-delete was a dead gesture.
+        onMenuHold = function(_, item)
+            if item and item.hold_callback then
+                item.hold_callback()
+                return true
+            end
+            return true
+        end,
     }
     UIManager:show(menu)
 end

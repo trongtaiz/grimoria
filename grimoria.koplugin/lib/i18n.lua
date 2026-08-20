@@ -233,6 +233,8 @@ function Localization:t(key, ...)
             confirm_extra_analysis =
                 "You already have %d stored analysis for this book.\n" ..
                 "It is kept - you can switch back afterwards.",
+            confirm_long_toc =
+                "This book has %d table-of-contents entries. The AI reply has a fixed size, so a very long chapter list can cut the analysis short. You can analyse a chapter range instead if that happens.",
         }
         translation = fallbacks[key] or key
     end

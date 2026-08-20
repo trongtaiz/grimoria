@@ -140,7 +140,7 @@ function GrimoriaPlugin:showChapterAppearances(char)
                 -- Trapper:info returns false when the reader dismissed the
                 -- message, which lib/mentions.lua turns into an abort.
                 return Trapper:info(string.format(self.loc:t("scan_progress"), done, total))
-            end)
+            end, self:chapterScheme())
         Trapper:clear()
 
         if not rows then
@@ -231,7 +231,7 @@ does not move it at all.
 function GrimoriaPlugin:jumpToChapter(index)
     local BookText = require("lib/booktext")
     local ok = pcall(function()
-        local chapters = BookText:getChapterList(self.ui)
+        local chapters = BookText:getChapterList(self.ui, self:chapterScheme())
         local ch = chapters[index]
         if not ch then error("no such chapter") end
 

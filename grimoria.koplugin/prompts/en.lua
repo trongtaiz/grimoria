@@ -41,8 +41,12 @@ GROUNDING RULES - these override everything else except AUTHOR_BIO:
 
 section_chapters = [[
 CHAPTERS: One entry per "=== CHAPTER n ===" marker present in the text, in
-order. Give the chapter's own title as printed, a 2-4 sentence summary of what
-happens in it, and its significant events. Do not merge or split chapters.
+order. Summarise ONLY the text between this marker and the next. n in the
+marker is the only chapter index - titles like "4" or "Chương 3" are the
+book's labels, not indexes. A title of two labels joined by an en-dash
+("5 – Chương 6") is two adjacent slices glued together, not licence to
+summarise the next printed chapter. 2-4 sentences, significant events, using
+only names that appear in that slice. Do not merge or split chapters.
 ]],
 
 section_spoilers = [[
@@ -56,20 +60,29 @@ by their real name in another storyline, that name is ANOTHER character.
 Until the text itself confirms two identities are the same person, their
 entries must read as unrelated:
 
-1. Write every field of an identity using ONLY what the text has established
-   about THAT NAME by the chapter being described. Describing what an
-   anonymous figure does is fine - the text does it too. Linking the figure
-   to a named character before the text does is the spoiler.
-2. Never cross-reference identities that the text has not yet connected -
-   not in intros, not in by_chapter entries, not in chapter summaries or
-   events, not in locations. Each identity gets only its own mentions.
-3. "role" is the role that identity APPEARS to have. A culprit posing as a
-   friend is Supporting until the text unmasks them.
+1. EXACT SPELLING, EVERY FIELD. A summary, event, intro, occupation, role,
+   or by_chapter line may use a spelling only if that exact spelling appears
+   in THAT chapter's text. A fake ID, a given name, a surname, and "the man
+   at the hotel" are different identities until the text connects them.
+   Example: chapter 7 shows a stranger under a false name; chapter 8 is where
+   a boyfriend walks in and they are revealed as one person. Chapter 7 names
+   the false name (or the descriptor), never the boyfriend. Two character
+   entries, plus identity_merges at 8.
+2. SPLIT TRIGGER. A scene that identifies someone only by a descriptor, cover
+   name, false document, game handle, or voice gets its OWN entry under that
+   spelling. Whenever you create such an entry, identity_merges MUST connect
+   it to the later name at the chapter the TEXT makes the link.
+   "identity_merges": [] on a book that hides an identity is a wrong answer.
+   A book with no such twist has "identity_merges": [].
+3. "role" and "occupation" are what that identity APPEARS to have in the
+   tagged chapter, not the person's CV. A culprit posing as a friend is
+   Supporting until the text unmasks them. A job learned later is a later
+   list entry, never back-dated onto the disguise.
 4. When the text DOES reveal that identities are one person, record it in
    the top-level "identity_merges" list: which names merge, the chapter the
    TEXT makes the connection, the merged display name, the true role, and a
    1-2 sentence revelation. The reader's app fuses the entries at exactly
-   that chapter. A book with no such twist has "identity_merges": [].
+   that chapter.
 5. The same stop-reading rule applies to chapter summaries and events:
    describe each scene as the text presents it at that point, preserving any
    anonymity, disguise, or misdirection the author maintains there.
@@ -105,9 +118,12 @@ For each identity:
   - intro: ONE sentence identifying this identity, written from the
     knowledge of a reader who has only just met them. It is shown from
     first_chapter onward and never changes, so it must contain nothing the
-    text has not established BY THAT CHAPTER - and in particular no name
+    text has not established BY THAT CHAPTER - no later job, and no name
     the reader has not met yet.
-  - first_chapter: the chapter where this identity first appears
+  - first_chapter: the chapter in which the TEXT FIRST PRINTS THE NAME you
+    used for this entry - not the chapter the person appears under some
+    other name or none. If the text shows someone in chapter 7 but does not
+    print this name until chapter 9, first_chapter is 9.
   - aliases: OTHER SPELLINGS OF THIS SAME NAME, and nothing else. A surname
     used alone, a given name used alone, a nickname, a title the text uses
     for them, a diminutive: [{ "alias": "Lizzy", "first_chapter": 3 }],
@@ -223,7 +239,7 @@ gives you nothing:
     {
       "index": 1,
       "title": "chapter title as printed",
-      "summary": "2-4 sentences",
+      "summary": "2-4 sentences, only names that appear in this chapter's text",
       "events": [ { "event": "what happened", "importance": "why it matters" } ]
     }
   ],
@@ -232,8 +248,8 @@ gives you nothing:
       "name": "the name THE TEXT uses for this identity",
       "role": [ { "value": "Protagonist / Supporting / Antagonist (as it appears)", "first_chapter": 1 } ],
       "gender": [ { "value": "Male / Female / Unspecified", "first_chapter": 1 } ],
-      "occupation": [ { "value": "", "first_chapter": 1 } ],
-      "intro": "one sentence, knowing only what a new reader knows",
+      "occupation": [ { "value": "as this identity appears at this chapter, not the person's CV", "first_chapter": 1 } ],
+      "intro": "one sentence, knowing only what a new reader knows; no later job, no unmet name",
       "first_chapter": 1,
       "aliases": [ { "alias": "another spelling of THIS name", "first_chapter": 1 } ],
       "by_chapter": [ { "chapter": 1, "development": "1-2 sentences" } ]
@@ -241,7 +257,7 @@ gives you nothing:
   ],
   "identity_merges": [
     { "names": ["identity A", "identity B"], "chapter": 1,
-      "merged_name": "A (B)", "true_role": "", "revelation": "1-2 sentences" }
+      "merged_name": "A (B)", "true_role": "", "revelation": "1-2 sentences; empty list only if the book has no hidden identity" }
   ],
   "locations": [
     { "name": "", "first_chapter": 1,

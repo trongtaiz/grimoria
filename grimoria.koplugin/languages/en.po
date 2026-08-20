@@ -707,6 +707,9 @@ msgstr "Analyse"
 msgid "confirm_extra_analysis"
 msgstr "You already have %d stored analysis for this book.\nIt is kept - you can switch back afterwards."
 
+msgid "confirm_long_toc"
+msgstr "This book has %d table-of-contents entries. The AI reply has a fixed size, so a very long chapter list can cut the analysis short. You can analyse a chapter range instead if that happens."
+
 msgid "stage_extracting"
 msgstr "📖 Reading the book from the device..."
 

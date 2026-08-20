@@ -154,5 +154,116 @@ do
           "and says the markers start at 30 rather than 1")
 end
 
+print("\n=== scheme 2 groups by DocFragment; scheme 1 still pairs ===")
+do
+    -- Above MAX_CHAPTERS (100). 126 pair-buckets to 63; 13 fragments stay 13.
+    local NENT, NFRAG = 126, 13
+    local function makeFragDoc(file)
+        local doc = { file = file, info = { has_pages = false, doc_height = 1000 } }
+        local toc, per = {}, math.ceil(NENT / NFRAG)
+        for i = 1, NENT do
+            local frag = math.ceil(i / per)
+            toc[i] = {
+                title = "E" .. i,
+                xpointer = string.format("/body/DocFragment[%d]/p[%d]", frag, i),
+            }
+        end
+        doc._at = "start"
+        function doc:getXPointer() return self._at end
+        function doc:gotoXPointer(xp) self._at = xp end
+        function doc:gotoPos(p) self._at = "pos" .. tostring(p) end
+        function doc:getToc() return toc end
+        function doc:getTextFromXPointers(a, _b)
+            return ("Body of " .. tostring(a) .. ". "):rep(60)
+        end
+        return doc
+    end
+
+    BookText._cache = nil
+    local ui = { document = makeFragDoc("/books/frag.epub") }
+    local list1, _, how1 = BookText:getChapterList(ui, 1)
+    check(#list1 == 63, "scheme 1 pairs 126 into 63 (got " .. #list1 .. ")")
+    check(how1 == "pairs", "scheme 1 how=pairs (got " .. tostring(how1) .. ")")
+
+    local list2, _, how2 = BookText:getChapterList(ui, 2)
+    check(#list2 == NFRAG,
+          "scheme 2 groups 126 into " .. NFRAG .. " fragments (got " .. #list2 .. ")")
+    check(how2 == "fragments", "scheme 2 how=fragments (got " .. tostring(how2) .. ")")
+
+    local text, meta = BookText:extract(ui, { scheme = 2 })
+    check(meta.scheme == 2, "extract records scheme 2")
+    check(text:find("=== CHAPTER 1:", 1, true) ~= nil
+          and text:find("=== CHAPTER 13:", 1, true) ~= nil,
+          "scheme 2 extract has CHAPTER 1 and CHAPTER 13")
+    check(text:find("=== CHAPTER 14:", 1, true) == nil, "and not CHAPTER 14")
+    check(text:find("=== CHAPTER 63:", 1, true) == nil,
+          "and does not use scheme-1 numbering")
+end
+
+print("\n=== a short TOC is identical under both schemes ===")
+do
+    local ui = freshUi("/books/short-scheme.epub")
+    local a = BookText:getChapterList(ui, 1)
+    BookText._cache = nil
+    local b = BookText:getChapterList(ui, 2)
+    check(#a == N and #b == N, "12 entries, no grouping under either scheme")
+end
+
+print("\n=== nested TOC depth groups at the parent ===")
+do
+    local toc = {}
+    local n = 0
+    -- 5 parents × 25 children = 130 entries, above MAX_CHAPTERS.
+    for p = 1, 5 do
+        n = n + 1
+        toc[n] = { title = "P" .. p, xpointer = "xp" .. n, depth = 1 }
+        for c = 1, 25 do
+            n = n + 1
+            toc[n] = { title = "P" .. p .. "c" .. c, xpointer = "xp" .. n, depth = 2 }
+        end
+    end
+    local doc = { file = "/books/nested.epub",
+                  info = { has_pages = false, doc_height = 1000 }, _at = "start" }
+    function doc:getXPointer() return self._at end
+    function doc:gotoXPointer(xp) self._at = xp end
+    function doc:gotoPos(p) self._at = "pos" .. tostring(p) end
+    function doc:getToc() return toc end
+    function doc:getTextFromXPointers()
+        return ("Nested body. "):rep(60)
+    end
+    BookText._cache = nil
+    local ui = { document = doc }
+    local list, _, how = BookText:getChapterList(ui, 2)
+    check(#list == 5, "scheme 2 keeps 5 depth-1 chapters (got " .. #list .. ")")
+    check(how == "depth", "how=depth (got " .. tostring(how) .. ")")
+end
+
+print("\n=== the chapter-list cache is per scheme ===")
+do
+    BookText._cache = nil
+    local ui = { document = (function()
+        local toc = {}
+        for i = 1, 126 do
+            toc[i] = {
+                title = "E" .. i,
+                xpointer = string.format("/body/DocFragment[%d]/p[%d]",
+                                        math.ceil(i / 10), i),
+            }
+        end
+        local doc = { file = "/books/cache-scheme.epub",
+                      info = { has_pages = false, doc_height = 1000 }, _at = "start" }
+        function doc:getXPointer() return self._at end
+        function doc:gotoXPointer(xp) self._at = xp end
+        function doc:gotoPos(p) self._at = "pos" .. tostring(p) end
+        function doc:getToc() return toc end
+        return doc
+    end)() }
+    local a = BookText:getChapterList(ui, 1)
+    local b = BookText:getChapterList(ui, 2)
+    check(#a == 63 and #b == 13,
+          "same ui, both schemes cached separately (got "
+          .. #a .. " and " .. #b .. ")")
+end
+
 print("\nRESULT: " .. (fails == 0 and "all checks passed" or (fails .. " CHECK(S) FAILED")))
 os.exit(fails == 0 and 0 or 1)

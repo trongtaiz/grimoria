@@ -178,6 +178,7 @@ function Localization:t(key, ...)
         -- immediately; translations can be added to the .po files later and
         -- will take precedence automatically.
         local fallbacks = {
+            quotes_title = "Quotes",
             cache_saved = "💾 Saved!",
             cache_save_failed = "❌ Save failed",
             ai_fetch_complete = "✅ Fetched from %s\n\n📖 %s\n👤 %s\n\n👥 %d | 📍 %d | 🎨 %d | 📅 %d | 📜 %d\n\n%s",

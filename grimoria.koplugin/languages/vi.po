@@ -454,6 +454,9 @@ msgstr "KHÔNG"
 # TIÊU ĐỀ KHÁC
 # ==============================
 
+msgid "quotes_title"
+msgstr "Trích dẫn"
+
 msgid "summary_title"
 msgstr "Tóm tắt sách"
 

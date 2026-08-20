@@ -618,6 +618,114 @@ function GrimoriaPlugin:applyChapterFilter()
         end
     end
     self.historical_figures = figs
+
+    --[[
+    Quotes filter like everything else: a passage is shown only once the
+    reader has finished the chapter it appears in. This list -- the one the
+    views render -- honours the whole-book toggle like every other list; the
+    sidecar export below deliberately does not.
+    ]]
+    local qs = {}
+    for _, q in ipairs(data.quotes or {}) do
+        if type(q) == "table" and type(q.quote) == "string" and #q.quote > 0
+            and (limit == nil or visibleFrom(q.chapter, last) <= limit) then
+            qs[#qs + 1] = {
+                quote = q.quote,
+                chapter = visibleFrom(q.chapter, last),
+                speaker = type(q.speaker) == "string" and q.speaker or "",
+            }
+        end
+    end
+    self.quotes = qs
+
+    self:exportQuotesSidecar()
+end
+
+--[[
+Write the quotes the reader has EARNED to <book>.sdr/grimoria_quotes.lua, for
+consumers outside this plugin -- concretely the sleep-screen user patch
+(patches/2-sleep-screen-variants.lua in this repo), which shows a random
+already-read quote while the device sleeps.
+
+Two deliberate differences from the view filter above:
+
+1. The limit is recomputed here from reading position alone. The whole-book
+   toggle widens what the toggle's OWNER sees on screen; a file on disk
+   outlives the toggle and is read by code that has no idea it was on, so
+   exporting under it would hand the sleep screen quotes from unread chapters.
+2. A position that does not resolve exports at the last limit that did (and
+   at 0 if none ever has) -- the same fail-closed direction as the filter,
+   because the alternative is writing unread quotes to disk on a transient
+   error.
+
+The write is skipped when the earned set has not changed: this runs before
+every view, and e-ink devices sit on flash that is slow and wears.
+]]
+function GrimoriaPlugin:exportQuotesSidecar()
+    local data = self.book_data
+    if not data or type(data.quotes) ~= "table" or #data.quotes == 0 then return end
+    local doc = self.ui and self.ui.document
+    local book_path = doc and doc.file
+    if not book_path then return end
+
+    local last = lastChapterOf(data)
+    local limit
+    local BookText = require("lib/booktext")
+    local here = BookText:getCurrentChapterIndex(self.ui, self:chapterScheme())
+    if not here then
+        limit = self._quotes_export_limit or 0
+    else
+        limit = self:spoilerIncludesCurrentChapter() and here or (here - 1)
+    end
+    self._quotes_export_limit = limit
+
+    local titles = {}
+    for _, ch in ipairs(data.chapters or {}) do
+        if type(ch) == "table" and ch.index then titles[ch.index] = ch.title end
+    end
+
+    local visible = {}
+    for _, q in ipairs(data.quotes) do
+        if type(q) == "table" and type(q.quote) == "string" and #q.quote > 0
+            and visibleFrom(q.chapter, last) <= limit then
+            local at = visibleFrom(q.chapter, last)
+            visible[#visible + 1] = {
+                quote = q.quote,
+                chapter = at,
+                chapter_title = type(titles[at]) == "string" and titles[at] or "",
+                speaker = type(q.speaker) == "string" and q.speaker or "",
+            }
+        end
+    end
+
+    -- Cheap change detection: the limit plus a length fingerprint of the set.
+    local fp = tostring(limit) .. ":" .. tostring(#visible)
+    for _, q in ipairs(visible) do fp = fp .. ":" .. #q.quote end
+    if self._quotes_export_fp == fp then return end
+
+    local Archive = require("lib/archive")
+    local archive = Archive:new()
+    local dir = archive:getSidecarDir(book_path)
+    if not dir then return end
+    local path = dir .. "/" .. require("lib/paths").NAME .. "_quotes.lua"
+    local ok, err = pcall(function()
+        assert(archive:ensureDirectory(path), "no sidecar directory")
+        local f = assert(io.open(path, "w"))
+        f:write("-- Grimoria quotes, filtered to the chapters already read.\n")
+        f:write("-- Consumed by the sleep-screen user patch; safe to delete.\n\n")
+        f:write("return " .. archive:serialize({
+            format = 1,
+            book_title = data.book_title,
+            up_to_chapter = limit,
+            quotes = visible,
+        }))
+        f:close()
+    end)
+    if not ok then
+        logger.warn("Grimoria: could not export quotes:", tostring(err))
+        return
+    end
+    self._quotes_export_fp = fp
 end
 
 --[[

@@ -454,6 +454,9 @@ msgstr "NO"
 # EXTRA TITLES
 # ==============================
 
+msgid "quotes_title"
+msgstr "Quotes"
+
 msgid "summary_title"
 msgstr "Book Summary"
 

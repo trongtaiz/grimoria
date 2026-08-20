@@ -639,6 +639,7 @@ function LLM:createPrompt(title, author, context)
         p.section_merges,
         p.section_locations,
         p.section_themes,
+        p.section_quotes,
         p.section_historical_figures,
         string.format(p.section_author_bio, author or "Unknown"),
         p.json_schema,
@@ -1839,6 +1840,36 @@ function LLM:validateAndCleanData(data)
         end
     end
     data.themes = themes
+
+    --[[
+    5. QUOTES -- verbatim passages, consumed by the summary view and exported
+    (filtered) for the sleep-screen user patch.
+
+    Same shape rules as every other collection: rebuilt field-by-field, an
+    untagged entry is end-of-book -- an unplaceable quote must not surface on
+    chapter 1 -- and a cleaned entry passes through unchanged, because this
+    function runs on every cache load as well as every fresh reply.
+    Deduplicated on the text since the point is a rotation of distinct lines;
+    capped because the consumer wants a rotation, not an anthology.
+    ]]
+    local MAX_QUOTES = 20
+    local quotes, seen_quotes = {}, {}
+    for _, qt in ipairs(data.quotes or {}) do
+        local body, at, speaker
+        if type(qt) == "string" then
+            body, at, speaker = qt, last_chapter, ""
+        elseif type(qt) == "table" then
+            body = ensureString(qt.quote or qt.text, "")
+            at = toInt(qt.chapter, last_chapter)
+            speaker = ensureString(qt.speaker, "")
+        end
+        if body and #body > 0 and not seen_quotes[body] and #quotes < MAX_QUOTES then
+            seen_quotes[body] = true
+            quotes[#quotes + 1] = { quote = body, chapter = at, speaker = speaker }
+        end
+    end
+    table.sort(quotes, function(a, b) return a.chapter < b.chapter end)
+    data.quotes = quotes
 
     --[[
     The AI no longer returns a flat timeline; it comes from chapters[].events.

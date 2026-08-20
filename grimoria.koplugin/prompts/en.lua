@@ -202,6 +202,25 @@ landed gets the chapter of that twist. Do not put 1 on a theme that depends on
 the ending.
 ]],
 
+section_quotes = [[
+QUOTES: 8-15 memorable passages COPIED VERBATIM from the supplied text -
+lines of dialogue or narration striking enough that a reader would want to
+meet them again. Never more than 20; fewer is fine, and a short or dry text
+may support only a handful. Do not invent, paraphrase, translate, or trim
+words inside a quote - it must appear in the text exactly as written.
+For each quote:
+  - quote: the exact passage, roughly 10-60 words, self-contained enough to
+    stand without its surrounding context
+  - chapter: the chapter (from the "=== CHAPTER n ===" markers) the passage
+    appears in. REQUIRED - the reader's app shows a quote only after they
+    have read past its chapter, so a wrong number spoils or hides it.
+  - speaker: who says it, spelled as the text spells them at that point,
+    or "" for narration
+SPOILER DISCIPLINE applies: never choose a passage whose impact depends on a
+later revelation, and never use a speaker name the text has not attached to
+that voice by the quote's own chapter.
+]],
+
 section_historical_figures = [[
 HISTORICAL_FIGURES: REAL historical people, and only if the text explicitly
 names or unmistakably refers to them. If the text mentions none, return an
@@ -283,11 +302,25 @@ gives you nothing:
   "themes": [
     { "theme": "spoiler-free statement of the theme", "first_chapter": 1 }
   ],
+  "quotes": [
+    { "quote": "verbatim passage from the text", "chapter": 1, "speaker": "" }
+  ],
   "historical_figures": [
     { "name": "", "biography": "", "first_chapter": 1,
       "role": [ { "value": "", "first_chapter": 1 } ],
       "importance_in_book": [ { "value": "", "first_chapter": 1 } ],
       "context_in_book": [ { "value": "", "first_chapter": 1 } ] }
+  ]
+}]],
+
+json_schema_quotes_only = [[
+REQUIRED JSON FORMAT - this is a QUOTES-ONLY run: emit exactly this shape and
+nothing else. An entry whose "chapter" you cannot read off a
+"=== CHAPTER n ===" marker must be left out entirely - the reader's app
+discards untagged quotes rather than risk showing one too early.
+{
+  "quotes": [
+    { "quote": "verbatim passage from the text", "chapter": 1, "speaker": "" }
   ]
 }]],
 

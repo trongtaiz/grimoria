@@ -71,11 +71,12 @@ local EXPECTED = {
     },
     ["lib/spoilers"] = { "applyChapterFilter", "toggleWholeBookView",
                          "spoilerIncludesCurrentChapter", "describeScope",
-                         "chapterScheme" },
+                         "chapterScheme", "exportQuotesSidecar" },
     ["lib/fetch"] = {
         "fetchFromAI", "getMaxCharsSetting", "askSpoilerPreference", "holdDeviceAwake",
         "releaseDeviceAwake", "continueWithFetch", "makeCancelConfirmWidget",
         "runFetch", "getReadingProgress", "fetchChapterRange", "pickChapter",
+        "fetchQuotesOnly", "runQuotesFetch",
     },
     ["lib/ui/menu"] = {
         "addToMainMenu", "getMenuCounts", "showQuickGrimoriaMenu", "showFullGrimoriaMenu",
@@ -137,7 +138,9 @@ end
 --[[
 66 from the split, plus 15 for lib/updater, 2 for the current-chapter rule,
 1 for showLongText, 3 for lib/ui/lookup, 6 for lib/ui/appearances, 2 for
-the chapter-range fetch, and 1 for chapterScheme.
+the chapter-range fetch, 1 for chapterScheme, 1 for exportQuotesSidecar
+(the AI-quotes feed for the sleep-screen patch), and 2 for the quotes-only
+fetch (fetchQuotesOnly + runQuotesFetch).
 
 66, not 67, at the split: main.lua had 67 top-level blocks before it, and
 exactly one of them -- fuseCharacters -- is a plain local rather than a method.
@@ -146,7 +149,7 @@ mixin list; if it climbs without this line being updated deliberately, someone
 added a method without deciding which module owns it.
 ]]
 print("\n=== the split did not drop anything ===")
-check(total == 96, "96 methods accounted for across 11 files (counted " .. total .. ")")
+check(total == 99, "99 methods accounted for across 11 files (counted " .. total .. ")")
 
 -- fuseCharacters is a file-local in lib/spoilers.lua, deliberately not a method.
 check(Plugin.fuseCharacters == nil,

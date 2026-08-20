@@ -178,6 +178,12 @@ function Localization:t(key, ...)
         -- immediately; translations can be added to the .po files later and
         -- will take precedence automatically.
         local fallbacks = {
+            quotes_title = "Quotes",
+            menu_extract_quotes = "🗨️ Extract quotes (AI)",
+            extract_quotes_confirm = "Extract quotes from this book?\n\nOne small request: the AI re-reads the text and returns up to 20 verbatim passages, which are added to the current analysis and shown on the sleep screen as you reach them.",
+            extract_quotes_done = "✅ %d quotes extracted and saved",
+            extract_quotes_none = "The model returned no quotes for this text.",
+            extract_quotes_no_analysis = "Run an AI analysis first — quotes are stored on the active analysis.",
             cache_saved = "💾 Saved!",
             cache_save_failed = "❌ Save failed",
             ai_fetch_complete = "✅ Fetched from %s\n\n📖 %s\n👤 %s\n\n👥 %d | 📍 %d | 🎨 %d | 📅 %d | 📜 %d\n\n%s",

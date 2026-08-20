@@ -360,8 +360,29 @@ function GrimoriaPlugin:showSummary()
     when they open this after a week away. It sits at the top because on a
     paginated view a footer is on the last page, where nobody looks first.
     ]]
-    self:showLongText("📖 " .. self.loc:t("summary_title"),
-                      self:describeScope() .. "\n\n" .. self.summary)
+    local body = self:describeScope() .. "\n\n" .. self.summary
+
+    --[[
+    The quotes ride along at the bottom of the summary rather than getting a
+    menu entry of their own: they are a by-product of the same analysis, and
+    the reader's main consumer for them is the sleep screen, not a view. The
+    list is self.quotes -- already filtered to finished chapters -- never
+    book_data.quotes.
+    ]]
+    if self.quotes and #self.quotes > 0 then
+        local parts = {}
+        for _, q in ipairs(self.quotes) do
+            local line = "“" .. q.quote .. "”"
+            if q.speaker and #q.speaker > 0 then
+                line = line .. "\n— " .. q.speaker
+            end
+            parts[#parts + 1] = line
+        end
+        body = body .. "\n\n── " .. self.loc:t("quotes_title") .. " ──\n\n"
+            .. table.concat(parts, "\n\n")
+    end
+
+    self:showLongText("📖 " .. self.loc:t("summary_title"), body)
 end
 
 function GrimoriaPlugin:showThemes()

@@ -620,34 +620,76 @@ LLM.TEXT_END   = "<<<BOOK_TEXT_END>>>"
 --[[
 Assemble the prompt from the per-feature sections.
 
-context.book_text  chapter-marked text from lib/booktext (may be nil)
-context.truncated  true when the tail of the book was dropped
+context.book_text    chapter-marked text from lib/booktext (may be nil)
+context.truncated    true when the tail of the book was dropped
+context.quotes_only  quotes-only fetch (analysis exists, quotes do not)
+context.skip_quotes  re-analyse of an analysis that already has quotes
 ]]
 function LLM:createPrompt(title, author, context)
     if not self.prompts then self:loadLanguage() end
     local p = self.prompts
     context = context or {}
 
-    local parts = {
-        p.system_instruction,
-        string.format('Book: "%s"\nAuthor: %s', title or "Unknown", author or "Unknown"),
-        p.grounding,
-        p.section_spoilers,
-        p.section_language,
-        p.section_chapters,
-        p.section_characters,
-        p.section_merges,
-        p.section_locations,
-        p.section_themes,
-        p.section_historical_figures,
-        string.format(p.section_author_bio, author or "Unknown"),
-        p.json_schema,
-    }
+    local parts
+    if context.quotes_only then
+        --[[
+        A quotes-only run: the book has an analysis already, made before the
+        quotes field existed, and re-buying the whole analysis to gain one
+        list would waste the reader's money. Grounding and spoiler discipline
+        still apply in full -- a verbatim quote is exactly the kind of text
+        that can hand over a twist -- but every section that would ask for
+        anything else is left out, so the reply is small and cheap.
+        ]]
+        parts = {
+            p.system_instruction,
+            string.format('Book: "%s"\nAuthor: %s', title or "Unknown", author or "Unknown"),
+            p.grounding,
+            p.section_spoilers,
+            p.section_quotes,
+            p.json_schema_quotes_only,
+        }
+    else
+        --[[
+        Re-analyse of a book that already has quotes omits that section and
+        the schema key. runFetch copies the existing list onto the new
+        analysis after the reply; asking again spends output budget on a
+        rotation the reader already paid for. A first analysis, and an
+        analysis whose quotes list is still empty, still ask.
+        ]]
+        parts = {
+            p.system_instruction,
+            string.format('Book: "%s"\nAuthor: %s', title or "Unknown", author or "Unknown"),
+            p.grounding,
+            p.section_spoilers,
+            p.section_language,
+            p.section_chapters,
+            p.section_characters,
+            p.section_merges,
+            p.section_locations,
+            p.section_themes,
+        }
+        if not context.skip_quotes then
+            parts[#parts + 1] = p.section_quotes
+        end
+        parts[#parts + 1] = p.section_historical_figures
+        parts[#parts + 1] = string.format(p.section_author_bio, author or "Unknown")
+        local schema = p.json_schema
+        if context.skip_quotes then
+            local block = '\n  "quotes": [\n    { "quote": "verbatim passage from the text", "chapter": 1, "speaker": "" }\n  ],'
+            local i, j = schema:find(block, 1, true)
+            if i then
+                schema = schema:sub(1, i - 1) .. schema:sub(j + 1)
+            end
+        end
+        parts[#parts + 1] = schema
+    end
 
     -- Long books can ask for more per-chapter detail than the reply is allowed
     -- to contain (65,536 output tokens, shared with the thinking pass). Say the
     -- ceiling out loud rather than letting the answer be cut off mid-JSON.
-    if context.chapter_count and context.chapter_count > 25 then
+    -- Not on a quotes-only run: its reply is 20 short entries at most, and the
+    -- clause talks about by_chapter entries the schema does not even ask for.
+    if not context.quotes_only and context.chapter_count and context.chapter_count > 25 then
         parts[#parts + 1] = string.format(
             "LENGTH BUDGET: this book has %d chapters, which is a lot. Emit at "
             .. "most about %d by_chapter entries IN TOTAL across all characters. "
@@ -1839,6 +1881,47 @@ function LLM:validateAndCleanData(data)
         end
     end
     data.themes = themes
+
+    --[[
+    5. QUOTES -- verbatim passages, consumed by the summary view and exported
+    (filtered) for the sleep-screen user patch.
+
+    Same shape rules as every other collection: rebuilt field-by-field, an
+    untagged entry is end-of-book -- an unplaceable quote must not surface on
+    chapter 1 -- and a cleaned entry passes through unchanged, because this
+    function runs on every cache load as well as every fresh reply.
+    Deduplicated on the text since the point is a rotation of distinct lines;
+    capped because the consumer wants a rotation, not an anthology.
+
+    The untagged default needs one extra case here. "Untagged means
+    end-of-book" leans on last_chapter, and a QUOTES-ONLY reply (see
+    createPrompt) carries no chapter list at all, so last_chapter is 1 --
+    which would publish an untagged quote on page one, the exact failure the
+    rule exists to prevent. With no chapters to measure the book by, an
+    untagged quote goes to a chapter no reader ever reaches instead. The
+    sentinel is a plain finite number on purpose: it must survive
+    Archive:serialize and a re-run of this function unchanged (math.huge
+    serialises as "inf", which does not parse back).
+    ]]
+    local MAX_QUOTES = 20
+    local quote_untagged = #data.chapters > 0 and last_chapter or 1000000000
+    local quotes, seen_quotes = {}, {}
+    for _, qt in ipairs(data.quotes or {}) do
+        local body, at, speaker
+        if type(qt) == "string" then
+            body, at, speaker = qt, quote_untagged, ""
+        elseif type(qt) == "table" then
+            body = ensureString(qt.quote or qt.text, "")
+            at = toInt(qt.chapter, quote_untagged)
+            speaker = ensureString(qt.speaker, "")
+        end
+        if body and #body > 0 and not seen_quotes[body] and #quotes < MAX_QUOTES then
+            seen_quotes[body] = true
+            quotes[#quotes + 1] = { quote = body, chapter = at, speaker = speaker }
+        end
+    end
+    table.sort(quotes, function(a, b) return a.chapter < b.chapter end)
+    data.quotes = quotes
 
     --[[
     The AI no longer returns a flat timeline; it comes from chapters[].events.

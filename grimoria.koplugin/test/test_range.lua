@@ -154,6 +154,29 @@ do
           "and says the markers start at 30 rather than 1")
 end
 
+print("\n=== re-analyse skips quotes already in hand ===")
+do
+    local LLM = require("lib/llm")
+    LLM.current_language = "en"
+    LLM:loadPrompts()
+
+    local first = LLM:createPrompt("T", "A", { book_text = "x" })
+    check(first:find("QUOTES:", 1, true) ~= nil,
+          "a first analysis still asks for quotes")
+    check(first:find('"quotes":', 1, true) ~= nil,
+          "and the schema still has the quotes key")
+
+    local skip = LLM:createPrompt("T", "A", { book_text = "x", skip_quotes = true })
+    check(not skip:find("QUOTES:", 1, true),
+          "re-analyse with quotes already in hand does not ask for them")
+    check(not skip:find('"quotes":', 1, true),
+          "and the schema has no quotes key")
+    check(skip:find("identity_merges", 1, true) ~= nil,
+          "but the rest of the analysis schema is still there")
+    check(skip:find("historical_figures", 1, true) ~= nil,
+          "including historical figures")
+end
+
 print("\n=== scheme 2 groups by DocFragment; scheme 1 still pairs ===")
 do
     -- Above MAX_CHAPTERS (100). 126 pair-buckets to 63; 13 fragments stay 13.

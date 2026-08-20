@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Quotes: the analysis now returns memorable passages, shown in the summary and exported for a sleep screen. Old analyses pick them up via Extract quotes; a re-analyse keeps quotes you already have.",
- "tag": "v3.4.0",
+ "notes": "Quotes: only lines worth keeping. 20 is a ceiling, not a target; a short book may return few, or none.",
+ "tag": "v3.4.1",
  "updater_version": 1,
- "version": "3.4.0"
+ "version": "3.4.1"
 }

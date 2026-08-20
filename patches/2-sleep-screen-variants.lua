@@ -547,37 +547,59 @@ local function scaleCoverFill(cover_bb, w, h)
     return canvas
 end
 
--- full-bleed cover that fades into paper towards the bottom (variant Nº 14)
+-- Paper veil matching the Nº 14 proof:
+--   linear-gradient(180deg, paper 0% at 12%, paper 90% at 42%, paper 100% at 58%)
+-- Done in-place with blendRect (Color8A over the cover). The previous
+-- implementation allocated an RGB32 copy plus a BB8A overlay and
+-- alphablitFrom'd them; on 8-bit e-ink that blit is a no-op (or an OOM),
+-- so the cover never faded.
 local function composeQuoteCover(cover_bb, w, h)
     local base = scaleCoverFill(cover_bb, w, h)
     if not base then return nil end
-    local comp = Blitbuffer.new(w, h, Blitbuffer.TYPE_BBRGB32)
-    comp:blitFrom(base, 0, 0, 0, 0, w, h)
-    pcall(function() base:free() end)
 
-    local overlay = Blitbuffer.new(w, h, Blitbuffer.TYPE_BB8A)
     local y0 = math.floor(h * 0.12)
-    local y1 = math.floor(h * 0.58)
-    local band = 4
-    local y = 0
-    while y < h do
-        local alpha
-        if y < y0 then
-            alpha = 0
-        elseif y >= y1 then
-            alpha = 255
-        else
-            alpha = math.floor(255 * (y - y0) / (y1 - y0) + 0.5)
+    local y1 = math.floor(h * 0.42)
+    local y2 = math.floor(h * 0.58)
+    local function alphaAt(y)
+        if y < y0 then return 0 end
+        if y >= y2 then return 255 end
+        if y >= y1 then
+            return math.floor(230 + 25 * (y - y1) / math.max(1, y2 - y1))
         end
-        if alpha > 0 then
-            overlay:paintRect(0, y, w, math.min(band, h - y),
-                Blitbuffer.Color8A(0xF5, alpha))
+        return math.floor(230 * (y - y0) / math.max(1, y1 - y0))
+    end
+
+    local paper8 = Blitbuffer.Color8(0xF6)
+    local can_blend = type(base.blendRect) == "function"
+    local band = 3
+    local y = y0
+    while y < h do
+        local a = alphaAt(y)
+        if a >= 255 then
+            base:paintRect(0, y, w, h - y, paper8)
+            break
+        end
+        local bh = math.min(band, h - y)
+        local blended = false
+        if can_blend and a > 0 then
+            blended = pcall(function()
+                base:blendRect(0, y, w, bh, Blitbuffer.Color8A(0xF6, a))
+            end)
+        end
+        if not blended and a > 0 then
+            -- Ordered-ish column dither: fraction `a` of each row is paper,
+            -- so the cover still shows through the transition on devices
+            -- without blendRect.
+            local step = math.max(1, math.floor(255 / a + 0.5))
+            local x = y % step
+            while x < w do
+                base:paintRect(x, y, 1, bh, paper8)
+                x = x + step
+            end
         end
         y = y + band
     end
-    comp:alphablitFrom(overlay, 0, 0, 0, 0, w, h)
-    pcall(function() overlay:free() end)
-    return comp
+    return base
 end
 
 -- ============================================================================
@@ -585,17 +607,24 @@ end
 -- ============================================================================
 
 local SERIF = { "NotoSerif-Regular.ttf", "NotoSans-Regular.ttf", "cfont" }
-local SERIF_ITALIC = { "NotoSerif-Italic.ttf", "NotoSans-Italic.ttf", "cfont" }
+-- Italic *files* are not shipped on every KOReader build. Requesting a
+-- missing NotoSerif-Italic.ttf can return a face that then aborts inside
+-- FreeType on first paint (Nº 06's crash). Use Regular and, where the
+-- widget supports it, the italic flag for a synthetic slant.
+local SERIF_ITALIC = { "NotoSerif-Regular.ttf", "NotoSans-Regular.ttf", "cfont" }
 local SANS = { "NotoSans-Regular.ttf", "cfont" }
 local SANS_LIGHT = { "NotoSans-Light.ttf", "NotoSans-Regular.ttf", "cfont" }
 local MONO = { "DroidSansMono.ttf", "NotoSansMono-Regular.ttf", "cfont" }
 
 local function getFaceSafe(candidates, size)
+    size = math.max(8, math.floor(tonumber(size) or 16))
     for _, name in ipairs(candidates) do
         local ok, f = pcall(Font.getFace, Font, name, size)
         if ok and f then return f end
     end
-    return Font:getFace("cfont", size)
+    local ok, f = pcall(Font.getFace, Font, "cfont", size)
+    if ok and f then return f end
+    return Font:getFace("cfont", 16)
 end
 
 local COLOR_INK = Blitbuffer.COLOR_BLACK
@@ -984,9 +1013,12 @@ end
 BUILDERS.quote_hero = function(ctx)
     local d = ctx.data
     local q = ctx.quote
-    if not q then error("quote_hero: no quote") end
+    if not (q and type(q.text) == "string" and #q.text > 0) then
+        error("quote_hero: no quote")
+    end
     local px = ctx.px
     local qw = ctx.w - 2 * px(26)
+    if qw < 16 then error("quote_hero: too narrow") end
 
     local children = { dimen = Geom:new{ w = ctx.w, h = ctx.h } }
 
@@ -996,29 +1028,8 @@ BUILDERS.quote_hero = function(ctx)
             place(ctx.w - corner:getSize().w - px(14), px(12), corner))
     end
 
-    table.insert(children, place(px(24), px(30),
-        text("“", ctx.face(SERIF, 64), COLOR_HAIR)))
-
-    local quote_box = TextBoxWidget:new{
-        text = q.text,
-        face = ctx.face(SERIF_ITALIC, 15.5),
-        width = qw,
-        fgcolor = COLOR_INK,
-        alignment = "left",
-    }
-    table.insert(children, place(px(26), px(96), quote_box))
-
-    local attr_parts = {}
-    if q.speaker then table.insert(attr_parts, utf8Sub(q.speaker, 24)) end
-    if q.page then table.insert(attr_parts, "trang " .. tostring(q.page)) end
-    if q.chapter and q.chapter ~= "" then table.insert(attr_parts, utf8Sub(q.chapter, 30)) end
-    if #attr_parts > 0 then
-        table.insert(children, place(px(26),
-            px(96) + quote_box:getSize().h + px(14),
-            text("— " .. table.concat(attr_parts, " · "), ctx.face(SANS, 10.5), COLOR_SOFT)))
-    end
-
-    -- footer: rule, thumb, title/author, percent
+    -- Footer first: the quote box is then height-capped so a long passage
+    -- cannot paint past the screen (that blit is what took KOReader down).
     local foot_group = HorizontalGroup:new{ align = "center" }
     local thumb = coverFitWidget(ctx, px(34), px(44))
     if thumb then
@@ -1026,19 +1037,60 @@ BUILDERS.quote_hero = function(ctx)
         table.insert(foot_group, HorizontalSpan:new{ width = px(10) })
     end
     local ft = VerticalGroup:new{ align = "left" }
-    table.insert(ft, text(utf8Sub(d.title, 24), ctx.face(SERIF, 11.5)))
+    table.insert(ft, text(utf8Sub(d.title, 24), ctx.face(SERIF, 12)))
     table.insert(ft, VerticalSpan:new{ width = px(3) })
     table.insert(ft, text(string.format("%s · %d / %d",
         utf8Sub(d.authors ~= "" and d.authors or "…", 20), d.page, d.total),
-        ctx.face(SANS, 9.5), COLOR_SOFT))
+        ctx.face(SANS, 10), COLOR_SOFT))
     table.insert(foot_group, ft)
-    local pct = text(d.pct_text, ctx.face(SERIF, 15))
+    local pct = text(d.pct_text or "", ctx.face(SERIF, 15))
     local span_w = math.max(0, qw - foot_group:getSize().w - pct:getSize().w)
     table.insert(foot_group, HorizontalSpan:new{ width = span_w })
     table.insert(foot_group, pct)
 
     local foot_h = foot_group:getSize().h
     local foot_y = ctx.h - foot_h - px(18)
+
+    -- Decorative mark. A missing glyph or a FreeType abort on the curly
+    -- quote must not kill the layout.
+    local mark_bottom = px(28)
+    local mark
+    local ok_mark
+    ok_mark, mark = pcall(text, "“", ctx.face(SERIF, 48), COLOR_HAIR)
+    if not (ok_mark and mark) then
+        ok_mark, mark = pcall(text, "\"", ctx.face(SERIF, 48), COLOR_HAIR)
+    end
+    if ok_mark and mark then
+        table.insert(children, place(px(24), px(22), mark))
+        mark_bottom = px(22) + math.min(mark:getSize().h, px(36))
+    end
+
+    local attr_parts = {}
+    if q.speaker then table.insert(attr_parts, utf8Sub(q.speaker, 24)) end
+    if q.page then table.insert(attr_parts, "trang " .. tostring(q.page)) end
+    if q.chapter and q.chapter ~= "" then table.insert(attr_parts, utf8Sub(q.chapter, 30)) end
+    local attr_h = (#attr_parts > 0) and px(28) or 0
+    local quote_top = math.max(mark_bottom + px(4), px(56))
+    local quote_max_h = foot_y - px(16) - attr_h - quote_top
+    if quote_max_h < px(32) then error("quote_hero: no room") end
+
+    local quote_box = TextBoxWidget:new{
+        text = q.text,
+        face = ctx.face(SERIF, 15),
+        width = qw,
+        height = quote_max_h,
+        fgcolor = COLOR_INK,
+        alignment = "left",
+        italic = true,
+    }
+    table.insert(children, place(px(26), quote_top, quote_box))
+
+    if #attr_parts > 0 then
+        table.insert(children, place(px(26),
+            quote_top + math.min(quote_box:getSize().h, quote_max_h) + px(10),
+            text("— " .. table.concat(attr_parts, " · "), ctx.face(SANS, 10), COLOR_SOFT)))
+    end
+
     table.insert(children, place(px(26), foot_y - px(12), hline(qw, 1, COLOR_HAIR)))
     table.insert(children, place(px(26), foot_y, foot_group))
 
@@ -1250,24 +1302,42 @@ end
 BUILDERS.quote_cover = function(ctx)
     local d = ctx.data
     local q = ctx.quote
-    if not q then error("quote_cover: no quote") end
+    if not (q and type(q.text) == "string" and #q.text > 0) then
+        error("quote_cover: no quote")
+    end
     if not d.cover_bb then error("quote_cover: no cover") end
     local px = ctx.px
 
     local ok, comp = pcall(composeQuoteCover, d.cover_bb, ctx.w, ctx.h)
     if not ok or not comp then error("quote_cover: compose failed") end
-    local bg = ImageWidget:new{ image = comp, width = ctx.w, height = ctx.h }
+    local bg = ImageWidget:new{
+        image = comp,
+        width = ctx.w,
+        height = ctx.h,
+        image_disposable = true,
+    }
 
     local qw = ctx.w - 2 * px(26)
+    -- Quote lives on the paper half of the veil (from ~58% down). Cap its
+    -- box so a long passage cannot paint off-screen.
+    local quote_max_h = math.max(px(48), math.floor(ctx.h * 0.32))
     local g = VerticalGroup:new{ align = "left" }
-    table.insert(g, text("“", ctx.face(SERIF, 46), COLOR_SOFT))
-    table.insert(g, VerticalSpan:new{ width = px(4) })
+    local ok_mark, mark = pcall(text, "“", ctx.face(SERIF, 36), COLOR_SOFT)
+    if not (ok_mark and mark) then
+        ok_mark, mark = pcall(text, "\"", ctx.face(SERIF, 36), COLOR_SOFT)
+    end
+    if ok_mark and mark then
+        table.insert(g, mark)
+        table.insert(g, VerticalSpan:new{ width = px(4) })
+    end
     table.insert(g, TextBoxWidget:new{
         text = q.text,
-        face = ctx.face(SERIF_ITALIC, 15),
+        face = ctx.face(SERIF, 15),
         width = qw,
+        height = quote_max_h,
         fgcolor = COLOR_INK,
         alignment = "left",
+        italic = true,
     })
 
     local attr_parts = {}

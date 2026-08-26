@@ -41,19 +41,16 @@ MAX_CHARS.
 ]]
 BookText.MAX_CHARS_DEFAULT = 1000000
 
--- How a too-long TOC is reduced to at most MAX_CHAPTERS.
+-- How chapter boundaries are derived. Stored analyses keep this number because
+-- changing a boundary changes every spoiler-filter chapter index after it.
 --
--- Scheme 1 is today's behaviour: consecutive pair-bucketing. Every analysis
--- stored before scheme 2 exists was numbered that way, and the filter must
--- keep using it for those files.
---
--- Scheme 2 (current): when the raw TOC exceeds MAX_CHAPTERS (100), try (a) nested
--- TOC depth, then (b) consecutive entries that share a DocFragment / spine
--- file, then (c) pair-bucketing as last resort. Frozen once shipped; a later
--- grouping change is scheme 3. Callers that number an analysis pass the
--- scheme that analysis was built with; extract of a new run uses this
--- constant.
-BookText.CHAPTER_SCHEME = 2
+-- Scheme 1: consecutive pair-bucketing above MAX_CHAPTERS.
+-- Scheme 2: nested depth / DocFragment grouping above MAX_CHAPTERS.
+-- Scheme 3 (current): scheme 2 plus recovery of printed subchapters which start
+-- a spine file but were omitted from the EPUB navigation document. This is a
+-- common Calibre conversion defect: the content has "1", "2", "3" section
+-- starts in separate XHTML files while toc.ncx advertises only the parent.
+BookText.CHAPTER_SCHEME = 3
 
 -- Above this many TOC entries, consecutive ones are grouped into buckets.
 -- Ebook tables of contents are wildly inconsistent -- Dau Voi's 13 printed
@@ -61,7 +58,7 @@ BookText.CHAPTER_SCHEME = 2
 -- too. Without a ceiling, a long book asks the model for hundreds of
 -- per-chapter entries and the reply is truncated.
 -- Ceiling on how many TOC entries we send as separate chapters. Above this,
--- consecutive entries are grouped (scheme 1: pairs; scheme 2: spine file /
+-- consecutive entries are grouped (scheme 1: pairs; schemes 2/3: spine file /
 -- TOC depth). 100 keeps a typical novel's subsection TOC intact -- Đầu Voi
 -- has 63 entries -- while still capping books that list every scene heading.
 -- A long list still shares the 65,536-token reply with thinking, so the fetch
@@ -123,7 +120,186 @@ end
 -- Returns { {title=, xp_start=, xp_end=}, ... } for reflowable documents.
 -- The document position is moved to find the start/end bounds, so the caller
 -- MUST have saved the reading position first (see extract()).
-local function getEpubChapters(doc)
+local function fragmentId(ch)
+    local xp = ch.xpointer or ch.xp_start
+    if type(xp) ~= "string" then return nil end
+    return tonumber(xp:match("DocFragment%[(%d+)%]"))
+end
+
+local function trim(s)
+    return type(s) == "string" and s:match("^%s*(.-)%s*$") or ""
+end
+
+local function blockText(markup)
+    local text = markup:gsub("<.->", " ")
+        :gsub("&nbsp;", " ")
+        :gsub("&#160;", " ")
+        :gsub("&lt;", "<")
+        :gsub("&gt;", ">")
+        :gsub("&quot;", '"')
+        :gsub("&apos;", "'")
+        :gsub("&amp;", "&")
+        :gsub("%s+", " ")
+    return trim(text)
+end
+
+-- First visible paragraph/heading blocks in one CREngine DocFragment.
+local function firstBlocks(fragment_html)
+    if type(fragment_html) ~= "string" then return {} end
+    local blocks = {}
+    for pos, inner in fragment_html:gmatch("()<[pP][^>]*>(.-)</[pP]>") do
+        local text = blockText(inner)
+        if text ~= "" then
+            blocks[#blocks + 1] = { pos = pos, kind = "p", text = text }
+        end
+    end
+    for pos, level, inner in fragment_html:gmatch(
+            "()<[hH]([1-6])[^>]*>(.-)</[hH]%2>") do
+        local text = blockText(inner)
+        if text ~= "" then
+            blocks[#blocks + 1] = { pos = pos, kind = "h", text = text }
+        end
+    end
+    table.sort(blocks, function(a, b) return a.pos < b.pos end)
+    return blocks
+end
+
+local function printedSectionNumber(text)
+    local n = tonumber(type(text) == "string" and text:match("^(%d+)$") or nil)
+    -- Printed novel subchapters are small ordinals. A larger standalone number
+    -- at a file boundary is much more likely to be a year or data table.
+    return n and n >= 1 and n <= 20 and n or nil
+end
+
+local function fragmentSignal(doc, n)
+    local xp = string.format("/body/DocFragment[%d]", n)
+    local ok_found, found = pcall(function()
+        return doc:isXPointerInDocument(xp)
+    end)
+    if not ok_found or not found then return nil end
+
+    local ok_html, fragment_html = pcall(function()
+        return doc:getHTMLFromXPointer(xp)
+    end)
+    if not ok_html then return false end
+    local blocks = firstBlocks(fragment_html)
+    local first, second = blocks[1], blocks[2]
+    if not first then return false end
+
+    local ok_pos, pos = pcall(function() return doc:getPosFromXPointer(xp) end)
+    if not ok_pos or type(pos) ~= "number" then return false end
+
+    local number = printedSectionNumber(first.text)
+    if first.kind == "h" then
+        local second_number = second and printedSectionNumber(second.text) or nil
+        if not second_number then return false end
+        return {
+            fragment = n, xp = xp, pos = pos, heading = first.text,
+            number = second_number,
+        }
+    end
+    if number then
+        return { fragment = n, xp = xp, pos = pos, number = number }
+    end
+
+    local second_number = second and printedSectionNumber(second.text) or nil
+    local has_word = first.text:find("[%w\128-\255]") ~= nil
+    if second_number and #first.text <= 160 and has_word then
+        return {
+            fragment = n, xp = xp, pos = pos, heading = first.text,
+            number = second_number,
+        }
+    end
+    return false
+end
+
+-- Add only strong spine-file boundaries: headings, or a sequence of at least
+-- two small printed ordinals inside one advertised TOC entry. Requiring a
+-- sequence prevents a file that happens to open with a standalone number from
+-- becoming a chapter by accident.
+local function refineEpubEntries(doc, entries)
+    if #entries == 0
+        or type(doc.isXPointerInDocument) ~= "function"
+        or type(doc.getHTMLFromXPointer) ~= "function"
+        or type(doc.getPosFromXPointer) ~= "function" then
+        return entries, false
+    end
+
+    local positions, raw_fragments = {}, {}
+    for i, entry in ipairs(entries) do
+        local ok, pos = pcall(function()
+            return doc:getPosFromXPointer(entry.xpointer)
+        end)
+        if not ok or type(pos) ~= "number" then return entries, false end
+        positions[i] = pos
+        raw_fragments[i] = fragmentId(entry)
+    end
+
+    local groups = {}
+    for i = 1, #entries do groups[i] = {} end
+    -- EPUB spine item counts are normally in the tens. The cap protects
+    -- malformed DOMs where every arbitrary DocFragment index resolves.
+    for n = 1, 2000 do
+        local signal = fragmentSignal(doc, n)
+        if signal == nil then break end
+        if signal then
+            local owner
+            for i, raw_fragment in ipairs(raw_fragments) do
+                if raw_fragment == n then owner = i; break end
+            end
+            if not owner then
+                for i = #entries, 1, -1 do
+                    if signal.pos >= positions[i] then owner = i; break end
+                end
+            end
+            if owner then groups[owner][#groups[owner] + 1] = signal end
+        end
+    end
+
+    local out, changed = {}, false
+    for i, entry in ipairs(entries) do
+        local signals = groups[i]
+        local raw_fragment = raw_fragments[i]
+        local anchor
+        local numeric_count = 0
+        for _, signal in ipairs(signals) do
+            if signal.fragment == raw_fragment then anchor = signal end
+            if signal.number then numeric_count = numeric_count + 1 end
+        end
+
+        local base = entry.title or ("Chapter " .. i)
+        local title = base
+        if anchor and anchor.number and numeric_count >= 2 then
+            title = base .. " · " .. anchor.number
+        end
+        out[#out + 1] = {
+            title = title, xpointer = entry.xpointer, depth = entry.depth,
+        }
+
+        for _, signal in ipairs(signals) do
+            if signal.fragment ~= raw_fragment then
+                local candidate_title
+                if signal.heading then
+                    base = signal.heading
+                    candidate_title = signal.number
+                        and (base .. " · " .. signal.number) or base
+                elseif signal.number and numeric_count >= 2 then
+                    candidate_title = base .. " · " .. signal.number
+                end
+                if candidate_title then
+                    out[#out + 1] = {
+                        title = candidate_title, xpointer = signal.xp,
+                        depth = entry.depth and (entry.depth + 1) or nil,
+                    }
+                    changed = true
+                end
+            end
+        end
+    end
+    return changed and out or entries, changed
+end
+
+local function getEpubChapters(doc, scheme)
     local saved = doc:getXPointer()
 
     doc:gotoPos(0)
@@ -147,8 +323,12 @@ local function getEpubChapters(doc)
 
     -- No usable TOC: treat the whole book as a single chapter.
     if #entries == 0 then
-        return { { title = "Full text", xp_start = doc_start, xp_end = doc_end } }
+        return { { title = "Full text", xp_start = doc_start, xp_end = doc_end } },
+            false
     end
+
+    local refined = false
+    if scheme >= 3 then entries, refined = refineEpubEntries(doc, entries) end
 
     local chapters = {}
     for i, e in ipairs(entries) do
@@ -162,7 +342,7 @@ local function getEpubChapters(doc)
 
     -- Front matter before the first TOC entry (cover, foreword) is skipped on
     -- purpose: it dilutes the analysis and burns tokens.
-    return chapters
+    return chapters, refined
 end
 
 -- Returns { {title=, page_start=, page_end=}, ... } for paged documents.
@@ -247,11 +427,6 @@ local function groupByDepth(raw, paged)
     return out
 end
 
-local function fragmentId(ch)
-    local xp = ch.xp_start
-    if type(xp) ~= "string" then return nil end
-    return tonumber(xp:match("DocFragment%[(%d+)%]"))
-end
 
 -- Consecutive TOC entries that share a crengine DocFragment (one spine HTML
 -- file, in practice one printed chapter on Calibre-split EPUBs).
@@ -281,38 +456,43 @@ THE canonical chapter list. Everything -- extraction, the AI's chapter
 numbering, and the reading-position filter -- must agree on what "chapter 12"
 means, so all of them come through here and nowhere else.
 
-`scheme` selects how a TOC longer than MAX_CHAPTERS is reduced. It is a
-forever-contract: scheme 1 is pair-bucketing (every analysis stored before
-scheme 2); scheme 2 is depth, then DocFragment, then pairs. Passing the
-wrong scheme against a stored analysis numbers the book differently from
-the tags in that analysis -- scheme 1 on a scheme-2 file leaks, scheme 2
-on a scheme-1 file hides extra. Callers that filter a stored analysis MUST
-pass the scheme that analysis recorded.
+`scheme` selects both EPUB boundary recovery and how a list longer than
+MAX_CHAPTERS is reduced. It is a forever-contract: scheme 1 is pair-bucketing;
+scheme 2 adds depth/DocFragment grouping; scheme 3 also recovers printed
+subchapters omitted from the EPUB navigation file. Passing the wrong scheme
+against a stored analysis numbers the book differently from the tags in that
+analysis, which can either leak later material or hide material already read.
 
-Books whose raw TOC is already <= MAX_CHAPTERS are identical under every
-scheme (no grouping).
+Books with a complete raw TOC below MAX_CHAPTERS remain unchanged.
 ]]
 function BookText:getChapterList(ui, scheme)
     local doc = ui.document
     local paged = isPaged(ui)
     scheme = tonumber(scheme) or self.CHAPTER_SCHEME
-    if scheme ~= 1 and scheme ~= 2 then scheme = self.CHAPTER_SCHEME end
+    if scheme ~= 1 and scheme ~= 2 and scheme ~= 3 then
+        scheme = self.CHAPTER_SCHEME
+    end
 
     -- Building the EPUB list moves the document to find its bounds, and the
     -- filter asks for this every time a view opens. Cache per book AND scheme
-    -- so a reader switching versions (scheme 1 vs 2) does not get the other
-    -- numbering.
+    -- so switching between analyses never reuses another scheme's numbering.
     if self._cache and self._cache.file == doc.file
         and self._cache.scheme == scheme then
         return self._cache.list, self._cache.grouped, self._cache.how
     end
 
-    local raw = paged and getPdfChapters(doc) or getEpubChapters(doc)
+    local raw, refined
+    if paged then
+        raw = getPdfChapters(doc)
+    else
+        raw, refined = getEpubChapters(doc, scheme)
+    end
 
     if #raw <= self.MAX_CHAPTERS then
+        local how = refined and "fragments" or "none"
         self._cache = { file = doc.file, scheme = scheme,
-                        list = raw, grouped = false, how = "none" }
-        return raw, false, "none"
+                        list = raw, grouped = false, how = how }
+        return raw, false, how
     end
 
     local out, how

@@ -313,5 +313,68 @@ do
           .. #a .. " and " .. #b .. ")")
 end
 
+
+print("\n=== scheme 3 recovers omitted EPUB subchapters from spine fragments ===")
+do
+    local html = {
+        "<h1>Major One</h1><p>1</p><p>Body.</p>",
+        "<p>2</p><p>Body.</p>",
+        "<p>This fragment only continues the previous section.</p>",
+        "<p>3</p><p>Body.</p>",
+        "<h1>Major Two</h1><p>Opening body without a number.</p>",
+        "<p>1</p><p>Body.</p>",
+        "<p>2</p><p>Body.</p>",
+        "<h1>Notes</h1><p>Back matter.</p>",
+    }
+    local toc = {
+        { title = "Major One", xpointer = "/body/DocFragment[1]/h1[1]" },
+        { title = "Major Two", xpointer = "/body/DocFragment[5]/h1[1]" },
+    }
+    local doc = {
+        file = "/books/underspecified.epub",
+        info = { has_pages = false, doc_height = 1000 },
+        _at = "saved",
+    }
+    function doc:getXPointer() return self._at end
+    function doc:gotoXPointer(xp) self._at = xp end
+    function doc:gotoPos(p)
+        self._at = p == 0 and "/body/DocFragment[1]"
+            or "/body/DocFragment[9]"
+    end
+    function doc:getToc() return toc end
+    function doc:isXPointerInDocument(xp)
+        local n = tonumber(xp:match("DocFragment%[(%d+)%]"))
+        return n ~= nil and html[n] ~= nil
+    end
+    function doc:getHTMLFromXPointer(xp)
+        local n = tonumber(xp:match("DocFragment%[(%d+)%]"))
+        return html[n]
+    end
+    function doc:getPosFromXPointer(xp)
+        local n = tonumber(tostring(xp):match("DocFragment%[(%d+)%]"))
+        return n and n * 100 or 100000
+    end
+
+    BookText._cache = nil
+    local old = BookText:getChapterList({ document = doc }, 2)
+    check(#old == 2, "scheme 2 preserves the EPUB's advertised 2-entry TOC")
+
+    BookText._cache = nil
+    local refined, grouped, how = BookText:getChapterList({ document = doc }, 3)
+    local titles = {}
+    for i, chapter in ipairs(refined) do titles[i] = chapter.title end
+    check(#refined == 6,
+          "scheme 3 recovers 6 numbered sections from 2 TOC entries (got "
+          .. #refined .. ")")
+    check(table.concat(titles, "|")
+          == "Major One · 1|Major One · 2|Major One · 3"
+          .. "|Major Two|Major Two · 1|Major Two · 2",
+          "recovered sections keep parent titles and ignore unnumbered back matter")
+    check(grouped == false and how == "fragments",
+          "refinement is reported as fragment recovery, not long-TOC grouping")
+    check(refined[2].xp_end == refined[3].xp_start,
+          "recovered boundaries are consecutive extraction ranges")
+end
+
 print("\nRESULT: " .. (fails == 0 and "all checks passed" or (fails .. " CHECK(S) FAILED")))
 os.exit(fails == 0 and 0 or 1)

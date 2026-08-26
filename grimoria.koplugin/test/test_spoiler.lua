@@ -481,6 +481,19 @@ local function deliversAll(data, label)
     return #all
 end
 
+print("\n=== stored analyses keep their chapter-boundary scheme ===")
+do
+    plugin.book_data = { analysis_meta = { chapter_scheme = 3 } }
+    check(plugin:chapterScheme() == 3,
+          "a scheme-3 analysis uses its recovered subchapter numbering")
+    plugin.book_data = { analysis_meta = { chapter_scheme = 2 } }
+    check(plugin:chapterScheme() == 2, "a scheme-2 analysis keeps its old numbering")
+    plugin.book_data = { analysis_meta = { chapter_scheme = 99 } }
+    check(plugin:chapterScheme() == 1,
+          "an unknown scheme fails closed to the legacy numbering")
+    plugin.book_data = nil
+end
+
 print("\n=== the filter delivers what the reader has earned (synthetic) ===")
 do
     --[[

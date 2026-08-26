@@ -743,16 +743,15 @@ value that cannot change while the plugin is loaded.
 --[[
 Which chapter-list scheme this analysis was numbered against.
 
-Stored on analysis_meta at fetch. Absent (every cache written before scheme
-2) means scheme 1 -- today's pair-bucketing. Defaulting the other way, to
-2, on an old 32-chapter analysis would count `here` on the 13-chapter list
-and leak: scheme 1 on a scheme-2 file hides extra (fail closed); scheme 2
-on a scheme-1 file shows too much.
+Stored on analysis_meta at fetch. Absent (every cache written before scheme 2)
+means scheme 1. New schemes may change chapter boundaries, so a stored analysis
+must always use its own scheme; using the current scheme could make the reader's
+position point at later model output and leak it.
 ]]
 function GrimoriaPlugin:chapterScheme()
     local meta = self.book_data and self.book_data.analysis_meta
     local s = type(meta) == "table" and tonumber(meta.chapter_scheme) or nil
-    if s == 1 or s == 2 then return s end
+    if s == 1 or s == 2 or s == 3 then return s end
     return 1
 end
 

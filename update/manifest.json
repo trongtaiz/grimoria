@@ -3,7 +3,7 @@
  "files": [
   {
    "path": "_meta.lua",
-   "sha256": "a918dc91264612a013882d35ff3be97bc93d92f47737527ac0db5c5df93fda61",
+   "sha256": "93565d090b9cbd47c2c75c50a67f359cae723589a962695a908851bcf5514ccf",
    "size": 353
   },
   {
@@ -33,8 +33,8 @@
   },
   {
    "path": "lib/booktext.lua",
-   "sha256": "90fcd2e89feade33a637051c775c2e4400913c24a3e305e0cc35ce1ebb773065",
-   "size": 21196
+   "sha256": "6c686eb2bd7af1cf51cc9c7080b5524a93d53dc2cbe579e970ad025db2230f24",
+   "size": 27686
   },
   {
    "path": "lib/fetch.lua",
@@ -73,8 +73,8 @@
   },
   {
    "path": "lib/spoilers.lua",
-   "sha256": "7c7ec88b2a7116ba6521b8a77bd804d838ca6d075b44c9e76b9b8a0b8315a07e",
-   "size": 34648
+   "sha256": "c3d4a2ad96e82c2cdc7ab6402741db750eb512d77f1073177890998f4217177f",
+   "size": 34614
   },
   {
    "path": "lib/updater.lua",
@@ -122,6 +122,6 @@
    "size": 17586
   }
  ],
- "tag": "v3.4.1",
- "version": "3.4.1"
+ "tag": "v3.5.0",
+ "version": "3.5.0"
 }

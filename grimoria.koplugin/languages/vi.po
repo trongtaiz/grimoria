@@ -771,8 +771,11 @@ msgstr "🔓 Đang hiện cả cuốn sách (có thể lộ nội dung)"
 msgid "menu_update_grimoria"
 msgstr "🔄 Phân tích lại cuốn này"
 
-msgid "menu_toggle_scope"
-msgstr "🔒 Bật/tắt bộ lọc lộ nội dung"
+msgid "menu_toggle_scope_on"
+msgstr "🔒 Bộ lọc lộ nội dung: bật (không lộ nội dung)"
+
+msgid "menu_toggle_scope_off"
+msgstr "🔓 Bộ lọc lộ nội dung: tắt (toàn bộ cuốn sách)"
 
 # ==============================
 # CÁC BẢN PHÂN TÍCH

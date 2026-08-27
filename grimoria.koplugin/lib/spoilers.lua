@@ -55,6 +55,7 @@ local _ = require("gettext")
 local Screen = require("device").screen
 
 local GrimoriaPlugin = {}
+local WHOLE_BOOK_SETTING = "grimoria_show_whole_book"
 
 -- --------------------------------------------------------- tagged values ----
 
@@ -498,7 +499,7 @@ function GrimoriaPlugin:applyChapterFilter()
     local has_chapter_data = data.chapters and #data.chapters > 0
     local previous = self.filter_chapter
     local limit = nil
-    if has_chapter_data and not self.show_whole_book then
+    if has_chapter_data and not self:isWholeBookView() then
         local BookText = require("lib/booktext")
         local here = BookText:getCurrentChapterIndex(self.ui, self:chapterScheme())
         if not here then
@@ -728,6 +729,17 @@ function GrimoriaPlugin:exportQuotesSidecar()
     self._quotes_export_fp = fp
 end
 
+-- Whole-book mode is per book. Persisting it globally would make opening a new
+-- unread book inherit an unsafe scope from a book the reader had finished.
+function GrimoriaPlugin:isWholeBookView()
+    if self.show_whole_book == nil then
+        local settings = self.ui and self.ui.doc_settings
+        self.show_whole_book =
+            settings and settings:readSetting(WHOLE_BOOK_SETTING) == true or false
+    end
+    return self.show_whole_book
+end
+
 --[[
 Should the chapter the reader is currently inside count as read?
 
@@ -776,7 +788,7 @@ Lua makes this easy to get wrong twice: 0 is TRUTHY, so `if self.filter_chapter`
 does not guard it.
 ]]
 function GrimoriaPlugin:describeScope()
-    if self.show_whole_book or self.filter_chapter == nil then
+    if self:isWholeBookView() or self.filter_chapter == nil then
         return self.loc:t("showing_whole_book")
     end
     if self.filter_chapter < 1 then
@@ -786,7 +798,11 @@ function GrimoriaPlugin:describeScope()
 end
 
 function GrimoriaPlugin:toggleWholeBookView()
-    self.show_whole_book = not self.show_whole_book
+    self.show_whole_book = not self:isWholeBookView()
+    local settings = self.ui and self.ui.doc_settings
+    if settings then
+        settings:saveSetting(WHOLE_BOOK_SETTING, self.show_whole_book)
+    end
     self:applyChapterFilter()
     UIManager:show(InfoMessage:new{ text = self:describeScope(), timeout = 2 })
 end

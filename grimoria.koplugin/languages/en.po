@@ -767,8 +767,11 @@ msgstr "🔓 Showing the whole book (spoilers included)"
 msgid "menu_update_grimoria"
 msgstr "🔄 Re-analyse this book"
 
-msgid "menu_toggle_scope"
-msgstr "🔒 Spoiler filter on/off"
+msgid "menu_toggle_scope_on"
+msgstr "🔒 Spoiler filter: on (spoiler-free)"
+
+msgid "menu_toggle_scope_off"
+msgstr "🔓 Spoiler filter: off (whole book)"
 
 # ==============================
 # STORED ANALYSES

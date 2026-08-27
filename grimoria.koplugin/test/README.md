@@ -59,7 +59,7 @@ out of the same 64000-token completion budget, and that is already the model's
 ceiling, so a run that leaves little headroom is one truncation away from the
 effort step-down in `callChatGPT`.
 
-Nine free offline suites need no key and no book:
+Ten free offline suites need no key and no book:
 
 ```sh
 lua smoke_openrouter.lua ..   # provider table, routing, main.lua entry points
@@ -68,6 +68,7 @@ lua test_localization.lua ..  # language discovery, .po parity, format specifier
 lua test_wiring.lua ..        # every method resolves after the lib/ mixin
 lua test_updater.lua ..       # self-update: swap, rollback, revert
 lua test_spoiler.lua ..       # the governing rule, on synthetic fixtures
+lua test_scope.lua ..         # visible, per-book spoiler-scope persistence
 lua test_mentions.lua ..      # appearance counting, the scan boundary, position restore
 lua test_range.lua ..         # section analyses keep the book's own chapter numbers
 

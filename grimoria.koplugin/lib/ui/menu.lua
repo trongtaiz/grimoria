@@ -266,7 +266,11 @@ function GrimoriaPlugin:addToMainMenu(menu_items)
                 -- The spoiler filter is local, so this costs nothing and works
                 -- offline -- it just switches which slice of the cached
                 -- analysis the views read from.
-                text = self.loc:t("menu_toggle_scope"),
+                text_func = function()
+                    local key = self:isWholeBookView()
+                        and "menu_toggle_scope_off" or "menu_toggle_scope_on"
+                    return self.loc:t(key)
+                end,
                 keep_menu_open = true,
                 callback = function()
                     self:toggleWholeBookView()

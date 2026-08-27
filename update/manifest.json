@@ -3,7 +3,7 @@
  "files": [
   {
    "path": "_meta.lua",
-   "sha256": "93565d090b9cbd47c2c75c50a67f359cae723589a962695a908851bcf5514ccf",
+   "sha256": "d94efb925ceda68fbfeceb3a905a3c934e10f76e78721989e1acb0c792a2a68d",
    "size": 353
   },
   {
@@ -18,13 +18,13 @@
   },
   {
    "path": "languages/en.po",
-   "sha256": "5d01208797dbb863d531dd6607ea4a95eea1858ba78436bc81eb6139586d0842",
-   "size": 23741
+   "sha256": "2e48b97e9183e268d6fb6cda538d41412140e93bfbcc3a50e13455a3e700ef37",
+   "size": 23834
   },
   {
    "path": "languages/vi.po",
-   "sha256": "070a6f8a7a7fb974122fea69b280040999dc8c21dfd12a04f14d385cdf81f44d",
-   "size": 26708
+   "sha256": "28a456054a3825b1698f0d48babbc0f3457dfb7899f83c9aef29524eca68c06c",
+   "size": 26836
   },
   {
    "path": "lib/archive.lua",
@@ -43,8 +43,8 @@
   },
   {
    "path": "lib/i18n.lua",
-   "sha256": "0006129ae1ba1806a7b004871187795993181e278e67e8220895be2fde9c73d4",
-   "size": 13325
+   "sha256": "4de41efb3461fdffe5ef80970200cd394d14427b2b9d37d9cd8132ae4eeb8535",
+   "size": 13417
   },
   {
    "path": "lib/llm.lua",
@@ -73,8 +73,8 @@
   },
   {
    "path": "lib/spoilers.lua",
-   "sha256": "c3d4a2ad96e82c2cdc7ab6402741db750eb512d77f1073177890998f4217177f",
-   "size": 34614
+   "sha256": "6e315b662079599ea73ecd0db2c586d5f11e085e7131612739c53ee2530bfee5",
+   "size": 35283
   },
   {
    "path": "lib/updater.lua",
@@ -93,8 +93,8 @@
   },
   {
    "path": "lib/ui/menu.lua",
-   "sha256": "7f4fdf685a7b6f39a40c6c24e2b2fddd2bf387c0979b908b1ceaea510399e895",
-   "size": 20375
+   "sha256": "a92d044230b019eccee1d8b45a123469460542ca0d12fb28b2084797b1038524",
+   "size": 20555
   },
   {
    "path": "lib/ui/notes.lua",
@@ -122,6 +122,6 @@
    "size": 17586
   }
  ],
- "tag": "v3.5.0",
- "version": "3.5.0"
+ "tag": "v3.5.1",
+ "version": "3.5.1"
 }

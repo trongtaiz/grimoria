@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Recover numbered EPUB subchapters omitted from the table of contents, so summaries follow the book\u2019s printed sections.",
- "tag": "v3.5.0",
+ "notes": "Keep each book's spoiler filter setting across restarts and show whether it is on or off.",
+ "tag": "v3.5.1",
  "updater_version": 1,
- "version": "3.5.0"
+ "version": "3.5.1"
 }

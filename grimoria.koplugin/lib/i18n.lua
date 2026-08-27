@@ -213,7 +213,8 @@ function Localization:t(key, ...)
             showing_up_to_chapter = "🔒 Showing up to chapter %d (spoiler-safe)",
             showing_whole_book = "🔓 Showing the whole book (spoilers included)",
             menu_update_grimoria = "🔄 Re-analyse this book",
-            menu_toggle_scope = "🔒 Spoiler filter on/off",
+            menu_toggle_scope_on = "🔒 Spoiler filter: on (spoiler-free)",
+            menu_toggle_scope_off = "🔓 Spoiler filter: off (whole book)",
 
             -- Stored analyses: several per book, switch between them offline.
             menu_versions = "📚 Analysis versions",

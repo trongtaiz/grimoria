@@ -30,6 +30,7 @@ end })
 stub("libs/libkoreader-lfs", { attributes = function() return nil end })
 
 local dashboard = require("lib/ui/dashboard")
+local whole_book = false
 local plugin = {
     loc = { t = function(_, key) return key end },
     characters = {}, locations = {}, themes = {}, timeline = {}, historical_figures = {},
@@ -45,7 +46,8 @@ local plugin = {
     end,
     describeScope = function() return "spoiler-safe" end,
     updaterPluginDir = function() return "/plugin" end,
-    isWholeBookView = function() return false end,
+    isWholeBookView = function() return whole_book end,
+    toggleWholeBookView = function() whole_book = not whole_book end,
 }
 setmetatable(plugin, { __index = dashboard })
 
@@ -64,6 +66,11 @@ check(#compact.item_table == 6, "compact keeps six priority features")
 check(compact.item_table[4].text == "menu_ai_settings", "AI service is on compact page one")
 check(compact.item_table[4].mandatory_func() == "OpenRouter", "AI row keeps its provider label short")
 check(compact.custom_title_bar.title == "menu_grimoria · Compact", "title shows Compact selected")
+local spoiler = compact.item_table[5]
+check(spoiler.mandatory_func() == "ON", "compact page two reflects spoiler-free state")
+spoiler.callback()
+check(compact.updated == true, "spoiler toggle refreshes the open dashboard")
+check(spoiler.mandatory_func() == "OFF", "refreshed dashboard reflects whole-book state")
 
 print("\n=== full dashboard ===")
 compact.custom_title_bar.right_icon_tap_callback()

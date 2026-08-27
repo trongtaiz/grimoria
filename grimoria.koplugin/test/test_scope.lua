@@ -23,7 +23,6 @@ stub("device", { screen = { getWidth = function() return 600 end,
 stub("lib/booktext", { getCurrentChapterIndex = function() return 2 end })
 
 local Spoilers = require("lib/spoilers")
-local Menu = require("lib/ui/menu")
 
 local fails = 0
 local function check(condition, message)
@@ -56,27 +55,9 @@ local function newPlugin(store)
         },
     }
     for name, value in pairs(Spoilers) do plugin[name] = value end
-    for name, value in pairs(Menu) do plugin[name] = value end
-    plugin.getMenuCounts = function()
-        return { characters = 0, locations = 0, themes = 0,
-                 timeline = 0, historical_figures = 0 }
-    end
     return plugin
 end
 
-local function scopeMenuItem(plugin)
-    local menu_items = {}
-    plugin:addToMainMenu(menu_items)
-    for _, item in ipairs(menu_items.grimoria.sub_item_table) do
-        if item.text == "menu_toggle_scope" then return item end
-        if item.text_func then
-            local ok, text = pcall(item.text_func)
-            if ok and (text == "menu_toggle_scope_on" or text == "menu_toggle_scope_off") then
-                return item
-            end
-        end
-    end
-end
 
 print("=== spoiler scope persists for the current book ===")
 local first_book = {}
@@ -98,14 +79,7 @@ other:applyChapterFilter()
 check(other.filter_chapter == 1,
       "a different book still defaults to spoiler-free")
 
-print("\n=== the menu shows the current value ===")
-local item = scopeMenuItem(reopened)
-check(item ~= nil, "the spoiler-scope menu item exists")
-check(item and type(item.text_func) == "function",
-      "the spoiler-scope menu item has dynamic text")
-check(item and item.text_func and item.text_func() == "menu_toggle_scope_off",
-      "whole-book mode is shown as spoiler filter off")
-
+print("\n=== switching back persists spoiler-free mode ===")
 reopened:toggleWholeBookView()
 check(first_book.grimoria_show_whole_book == false,
       "switching back saves spoiler-free mode")
@@ -113,20 +87,6 @@ local reopened_again = newPlugin(first_book)
 reopened_again:applyChapterFilter()
 check(reopened_again.filter_chapter == 1,
       "spoiler-free mode survives another fresh instance")
-local on_item = scopeMenuItem(reopened_again)
-check(on_item and on_item.text_func and on_item.text_func() == "menu_toggle_scope_on",
-      "spoiler-free mode is shown as spoiler filter on")
-
-print("\n=== toggling refreshes the open menu row ===")
-local refreshes = 0
-local touchmenu = {
-    updateItems = function() refreshes = refreshes + 1 end,
-}
-on_item.callback(touchmenu)
-check(refreshes == 1,
-      "the open touch menu refreshes after the spoiler filter changes")
-check(on_item.text_func() == "menu_toggle_scope_off",
-      "the refreshed row immediately shows spoiler filter off")
 
 print("\nRESULT: " .. (fails == 0 and "all checks passed" or (fails .. " CHECK(S) FAILED")))
 os.exit(fails == 0 and 0 or 1)

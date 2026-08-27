@@ -66,3 +66,7 @@ Thumbs.db
 
 # Python bytecode from the test harness
 __pycache__/
+
+# Local UI prototypes and browser captures
+grimoria.koplugin/lib/ui/menu-prototype.html
+.playwright-cli/

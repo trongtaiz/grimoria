@@ -50,6 +50,7 @@ end
 mixin(GrimoriaPlugin, require("lib/spoilers"), "lib/spoilers")
 mixin(GrimoriaPlugin, require("lib/fetch"), "lib/fetch")
 mixin(GrimoriaPlugin, require("lib/ui/menu"), "lib/ui/menu")
+mixin(GrimoriaPlugin, require("lib/ui/dashboard"), "lib/ui/dashboard")
 mixin(GrimoriaPlugin, require("lib/ui/settings"), "lib/ui/settings")
 mixin(GrimoriaPlugin, require("lib/ui/versions"), "lib/ui/versions")
 mixin(GrimoriaPlugin, require("lib/ui/notes"), "lib/ui/notes")

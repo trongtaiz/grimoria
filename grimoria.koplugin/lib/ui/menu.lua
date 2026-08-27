@@ -272,8 +272,9 @@ function GrimoriaPlugin:addToMainMenu(menu_items)
                     return self.loc:t(key)
                 end,
                 keep_menu_open = true,
-                callback = function()
+                callback = function(touchmenu_instance)
                     self:toggleWholeBookView()
+                    if touchmenu_instance then touchmenu_instance:updateItems() end
                 end,
             },
             {

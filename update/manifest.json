@@ -3,7 +3,7 @@
  "files": [
   {
    "path": "_meta.lua",
-   "sha256": "d94efb925ceda68fbfeceb3a905a3c934e10f76e78721989e1acb0c792a2a68d",
+   "sha256": "ebf54f0e3bc77be92e844e951f38e369b551ab54d53b5da51031665ab59a0810",
    "size": 353
   },
   {
@@ -93,8 +93,8 @@
   },
   {
    "path": "lib/ui/menu.lua",
-   "sha256": "a92d044230b019eccee1d8b45a123469460542ca0d12fb28b2084797b1038524",
-   "size": 20555
+   "sha256": "6094967cbfdd8898befe3e63a94d48e32a5c2d48c57efaeca540357367af7987",
+   "size": 20657
   },
   {
    "path": "lib/ui/notes.lua",
@@ -122,6 +122,6 @@
    "size": 17586
   }
  ],
- "tag": "v3.5.1",
- "version": "3.5.1"
+ "tag": "v3.5.2",
+ "version": "3.5.2"
 }

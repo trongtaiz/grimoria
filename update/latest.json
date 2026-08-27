@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Keep each book's spoiler filter setting across restarts and show whether it is on or off.",
- "tag": "v3.5.1",
+ "notes": "Spoiler filter toggle now refreshes its menu label immediately.",
+ "tag": "v3.5.2",
  "updater_version": 1,
- "version": "3.5.1"
+ "version": "3.5.2"
 }

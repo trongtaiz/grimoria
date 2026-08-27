@@ -117,5 +117,16 @@ local on_item = scopeMenuItem(reopened_again)
 check(on_item and on_item.text_func and on_item.text_func() == "menu_toggle_scope_on",
       "spoiler-free mode is shown as spoiler filter on")
 
+print("\n=== toggling refreshes the open menu row ===")
+local refreshes = 0
+local touchmenu = {
+    updateItems = function() refreshes = refreshes + 1 end,
+}
+on_item.callback(touchmenu)
+check(refreshes == 1,
+      "the open touch menu refreshes after the spoiler filter changes")
+check(on_item.text_func() == "menu_toggle_scope_off",
+      "the refreshed row immediately shows spoiler filter off")
+
 print("\nRESULT: " .. (fails == 0 and "all checks passed" or (fails .. " CHECK(S) FAILED")))
 os.exit(fails == 0 and 0 or 1)

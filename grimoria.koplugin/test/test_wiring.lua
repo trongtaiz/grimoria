@@ -82,10 +82,12 @@ local EXPECTED = {
         "addToMainMenu", "getMenuCounts", "showQuickGrimoriaMenu", "showFullGrimoriaMenu",
         "onShowGrimoriaMenu", "showLanguageSelection", "showAbout", "toggleGrimoriaMode",
     },
+    ["lib/ui/dashboard"] = { "showGrimoriaDashboard" },
     ["lib/ui/settings"] = {
         "selectGeminiModel", "setGeminiAPIKey", "setChatGPTAPIKey", "getLLM",
         "getProviderModel", "getProviderEffort", "setProviderField", "setCustomField",
-        "selectOpenRouterModel", "selectReasoningEffort", "selectAIProvider",
+        "selectOpenRouterModel", "selectReasoningEffort", "showAISettings",
+        "selectAIProvider",
     },
     ["lib/ui/versions"] = {
         "reloadActiveVersion", "describeVersion", "showVersionPicker",
@@ -118,8 +120,8 @@ local EXPECTED = {
 
 local order = {
     "main.lua (shell)", "lib/spoilers", "lib/fetch", "lib/ui/menu",
-    "lib/ui/settings", "lib/ui/versions", "lib/ui/notes", "lib/ui/views",
-    "lib/ui/lookup", "lib/ui/appearances", "lib/updater",
+    "lib/ui/dashboard", "lib/ui/settings", "lib/ui/versions", "lib/ui/notes",
+    "lib/ui/views", "lib/ui/lookup", "lib/ui/appearances", "lib/updater",
 }
 
 local total = 0
@@ -135,21 +137,10 @@ for _, group in ipairs(order) do
           (#missing > 0 and (" -- MISSING: " .. table.concat(missing, ", ")) or ""))
 end
 
---[[
-66 from the split, plus 15 for lib/updater, 3 for the current-chapter and
-scope-preference rules, 1 for showLongText, 3 for lib/ui/lookup, 6 for
-lib/ui/appearances, 2 for the chapter-range fetch, 1 for chapterScheme,
-1 for exportQuotesSidecar (the AI-quotes feed for the sleep-screen patch),
-and 2 for the quotes-only fetch (fetchQuotesOnly + runQuotesFetch).
-
-66, not 67, at the split: main.lua had 67 top-level blocks before it, and
-exactly one of them -- fuseCharacters -- is a plain local rather than a method.
-If this number ever drops, a method was dropped on the floor by an edit to the
-mixin list; if it climbs without this line being updated deliberately, someone
-added a method without deciding which module owns it.
-]]
+-- The split count is deliberately explicit: adding a dispatched method without
+-- registering it here is the same wiring failure this test exists to catch.
 print("\n=== the split did not drop anything ===")
-check(total == 100, "100 methods accounted for across 11 files (counted " .. total .. ")")
+check(total == 102, "102 methods accounted for across 12 files (counted " .. total .. ")")
 
 -- fuseCharacters is a file-local in lib/spoilers.lua, deliberately not a method.
 check(Plugin.fuseCharacters == nil,

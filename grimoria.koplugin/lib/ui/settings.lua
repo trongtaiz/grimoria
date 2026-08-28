@@ -398,7 +398,119 @@ function GrimoriaPlugin:selectReasoningEffort(provider, touchmenu_instance)
     UIManager:show(dialog)
 end
 
-function GrimoriaPlugin:selectAIProvider()
+-- Full-screen provider settings. Provider selection comes first, followed by
+-- the active everyday providers (OpenRouter, Custom) and the legacy providers.
+-- Menu owns the paginator, keeping its footer anchored to the screen bottom.
+function GrimoriaPlugin:showAISettings()
+    local helper = self:getLLM()
+    local settings_menu
+    local function refresh()
+        if settings_menu then settings_menu:updateItems() end
+    end
+    local function activeProvider()
+        local id = self.ai_provider or helper.default_provider or "openrouter"
+        local cfg = helper.providers[id] or {}
+        local labels = {
+            openrouter = "OpenRouter",
+            custom = "Custom endpoint",
+            gemini = "Google Gemini",
+            chatgpt = "ChatGPT",
+        }
+        local label = labels[id] or cfg.name or id
+        return cfg.model and cfg.model ~= "" and (label .. " · " .. cfg.model) or label
+    end
+    local function activeProviderLabel()
+        local summary = activeProvider()
+        return summary:match("^(.-) · ") or summary
+    end
+
+    local items = {
+        {
+            text = self.loc:t("menu_provider_select"),
+            mandatory_func = activeProviderLabel,
+            bold = true,
+            callback = function() self:selectAIProvider(refresh) end,
+        },
+        {
+            text = "OpenRouter: API key",
+            callback = function()
+                self:setProviderField("openrouter", "api_key", "OpenRouter API key",
+                    "Your key from openrouter.ai/keys.\nStarts with sk-or-v1-", refresh)
+            end,
+        },
+        {
+            text = "OpenRouter: model",
+            mandatory_func = function() return self:getProviderModel("openrouter") end,
+            callback = function() self:selectOpenRouterModel(settings_menu) end,
+        },
+        {
+            text = "OpenRouter: reasoning",
+            mandatory_func = function() return self:getProviderEffort("openrouter") end,
+            callback = function() self:selectReasoningEffort("openrouter", settings_menu) end,
+        },
+        {
+            text = "Custom endpoint: API key",
+            callback = function()
+                self:setProviderField("custom", "api_key", "Custom AI API key",
+                    "Key for any OpenAI-compatible endpoint.", refresh)
+            end,
+        },
+        {
+            text = "Custom endpoint: model",
+            mandatory_func = function() return self:getProviderModel("custom") end,
+            callback = function()
+                self:setProviderField("custom", "model", "Custom AI model",
+                    "Model name as the endpoint spells it.", refresh)
+            end,
+        },
+        {
+            text = "Custom endpoint: reasoning",
+            mandatory_func = function() return self:getProviderEffort("custom") end,
+            callback = function() self:selectReasoningEffort("custom", settings_menu) end,
+        },
+        {
+            text = "Custom endpoint: URL",
+            mandatory_func = function()
+                local cfg = helper.providers.custom
+                return cfg and cfg.endpoint or nil
+            end,
+            callback = function()
+                self:setProviderField("custom", "endpoint", "Custom AI endpoint",
+                    "Full chat-completions URL, ending in /v1/chat/completions", refresh)
+            end,
+        },
+        {
+            text = self.loc:t("menu_gemini_key"),
+            callback = function() self:setGeminiAPIKey() end,
+        },
+        {
+            text = self.loc:t("menu_gemini_model"),
+            mandatory_func = function() return self:getProviderModel("gemini") end,
+            callback = function() self:selectGeminiModel() end,
+        },
+        {
+            text = self.loc:t("menu_chatgpt_key"),
+            callback = function() self:setChatGPTAPIKey() end,
+        },
+    }
+
+    settings_menu = Menu:new{
+        title = self.loc:t("menu_ai_settings"),
+        subtitle = activeProvider(),
+        item_table = items,
+        items_per_page = 6,
+        single_line = true,
+        is_enable_shortcut = false,
+        is_borderless = true,
+        is_popout = false,
+        title_bar_fm_style = true,
+        width = Screen:getWidth(),
+        height = Screen:getHeight(),
+    }
+    UIManager:show(settings_menu)
+end
+
+function GrimoriaPlugin:selectAIProvider(on_selected)
     if not self.llm then
         local LLM = require("lib/llm")
         self.llm = LLM
@@ -416,10 +528,10 @@ function GrimoriaPlugin:selectAIProvider()
     -- one to lib/llm.lua now only needs a line here, and the "custom"
     -- provider can't be left unselectable.
     local order = {
-        { id = "gemini",     label = "Google Gemini" },
-        { id = "chatgpt",    label = "ChatGPT" },
         { id = "openrouter", label = "OpenRouter" },
         { id = "custom",     label = nil },   -- takes its name from the config
+        { id = "gemini",     label = "Google Gemini" },
+        { id = "chatgpt",    label = "ChatGPT" },
     }
 
     local providers = {}
@@ -447,6 +559,7 @@ function GrimoriaPlugin:selectAIProvider()
                             timeout = 2,
                         })
                         if provider_menu then UIManager:close(provider_menu) end
+                        if on_selected then on_selected() end
                     end,
                 })
             else

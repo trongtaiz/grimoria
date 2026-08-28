@@ -142,6 +142,14 @@ do
     local whole = LLM:createPrompt("T", "A", { book_text = "x" })
     check(not whole:find("SECTION ANALYSIS", 1, true),
           "a whole-book prompt carries no section clause")
+    check(whole:find("SPLIT only when the READER does not yet know", 1, true) ~= nil,
+          "keeps reveal-gated hidden identities separate")
+    check(whole:find("INDEPENDENT COPIES ARE DIFFERENT CHARACTERS", 1, true) ~= nil,
+          "keeps independently acting copies as separate characters")
+    check(whole:find("Do NOT put independent copies in identity_merges", 1, true) ~= nil,
+          "does not merge independently acting copies")
+    check(whole:find("never repeat it in another copy's aliases", 1, true) ~= nil,
+          "keeps shared base names off copy aliases")
 
     local part = LLM:createPrompt("T", "A", {
         book_text = "x", first_chapter = 30, last_chapter = 40,

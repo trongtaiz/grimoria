@@ -44,6 +44,9 @@ the chapter where the *text itself* makes the link — and the merge is applied
 only from that chapter on. Themes are chapter-tagged and filtered the same way,
 because models will cheerfully name the murderer inside a theme description.
 
+Coexisting clones, doubles, split selves, and timeline copies remain separate
+characters and never appear in `identity_merges`.
+
 ---
 
 ## Requirements

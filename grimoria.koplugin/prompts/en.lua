@@ -82,19 +82,50 @@ entries must read as unrelated:
    a legal name, a title, a diminutive, or a stage name the text has
    already attached to a named character in that scene.
    A book with no such twist has "identity_merges": [].
-3. "role" and "occupation" are what that identity APPEARS to have in the
+3. INDEPENDENT COPIES ARE DIFFERENT CHARACTERS. Merge spellings only when
+   they denote one continuous agent. If the story creates versions that
+   coexist or proceed through independent bodies, timelines, memories, or
+   actions (for example a clone, double, split self, or time-branch copy),
+   give each version its own character entry even though they share an
+   origin and ordinary name. Use the text's stable label for each version.
+   The original/main version means the already established continuous
+   viewpoint card, not necessarily the oldest timeline. Preserve exactly the
+   ordinary-name card that existed before the split: its first text spelling
+   remains the name, while later fuller spellings remain aliases. Never rename
+   it to a later version-label or move one of its spellings to a new copy.
+   It MUST keep the first unambiguous branch-specific code assigned to it
+   before any later dispute, and add its later stable version-label as an
+   alias. A later disputed or reassigned code is not an alias. Every other
+   version gets a separate card when it first acts independently, using its
+   stable version-label as the card name.
+   Do NOT put independent copies in identity_merges: that list is only for
+   two presentations later revealed to be one
+   continuous individual, while copies remain multiple individuals.
+4. COPY ALIASES MUST BE BRANCH-UNIQUE. A spelling shared by all versions
+   before or after the split (the original legal/full name or bare surname)
+   belongs only to the original/main card; never repeat it in another copy's aliases.
+   For a copy card, keep only spellings that uniquely identify that branch.
+   Its stable version-label is the card name. A branch-specific number or code
+   that the text explicitly and unambiguously assigned to that continuous
+   branch before the stable label MUST be kept as an alias. A later numbering
+   dispute neither moves nor deletes that earlier alias; omit only the newly
+   proposed or reassigned code, and any spelling already belonging to another
+   card.
+   Do not store clothing or ordinal descriptions, or generic phrases such as
+   "another version" or "the other one", as aliases.
+5. "role" and "occupation" are what that identity APPEARS to have in the
    tagged chapter, not the person's CV. A culprit posing as a friend is
    Supporting until the text unmasks them. A job learned later is a later
    list entry, never back-dated onto the disguise.
-4. When the text DOES reveal that identities are one person, record it in
+6. When the text DOES reveal that identities are one person, record it in
    the top-level "identity_merges" list: which names merge, the chapter the
    TEXT makes the connection, the merged display name, the true role, and a
    1-2 sentence revelation. The reader's app fuses the entries at exactly
    that chapter.
-5. The same stop-reading rule applies to chapter summaries and events:
+7. The same stop-reading rule applies to chapter summaries and events:
    describe each scene as the text presents it at that point, preserving any
    anonymity, disguise, or misdirection the author maintains there.
-6. NO FORWARD REFERENCE AND NO FORESHADOWING. Write the summary and events of
+8. NO FORWARD REFERENCE AND NO FORESHADOWING. Write the summary and events of
    chapter n as if chapter n+1 did not exist. Nothing may hint at what is
    coming, not even without naming it: no "which will prove important later",
    no "little does he know", no "the first of several". A reader sees each
@@ -170,6 +201,7 @@ IDENTITY_MERGES: One entry per revealed connection between identities.
     reveal, e.g. "Van (Morisu Kyoichi)"
   - true_role: the fused character's real role
   - revelation: 1-2 sentences stating what was revealed
+Never merge coexisting copies or timeline branches; they remain separate characters.
 Empty list if the book has no hidden-identity twist.
 ]],
 

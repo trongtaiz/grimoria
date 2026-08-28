@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Spoiler filter toggle now refreshes its menu label immediately.",
- "tag": "v3.5.2",
+ "notes": "Keeps timeline copies separate and prevents shared-name alias collisions.",
+ "tag": "v3.5.3",
  "updater_version": 1,
- "version": "3.5.2"
+ "version": "3.5.3"
 }

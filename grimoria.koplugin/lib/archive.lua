@@ -447,9 +447,22 @@ function Archive:saveCache(book_path, data, meta)
     end
 
     local index = self:loadIndex(book_path)
-    local entry = self:summarise(data)
-    entry.id, entry.file, entry.label = id, file, meta.label
-    index.versions[#index.versions + 1] = entry
+    -- A missing or unreadable index is rebuilt after the payload has already
+    -- been written, so that rebuilt list already contains this version. An
+    -- adopted pre-rename index does not. Decide from the loaded contents,
+    -- rather than from which index filename happened to exist.
+    local already_indexed = false
+    for _, version in ipairs(index.versions) do
+        if version.id == id and version.file == file then
+            already_indexed = true
+            break
+        end
+    end
+    if not already_indexed then
+        local entry = self:summarise(data)
+        entry.id, entry.file, entry.label = id, file, meta.label
+        index.versions[#index.versions + 1] = entry
+    end
     index.active = id
     self:saveIndex(book_path, index)
 

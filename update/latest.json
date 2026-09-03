@@ -1,7 +1,7 @@
 {
  "contract": 1,
- "notes": "Keeps timeline copies separate and prevents shared-name alias collisions.",
- "tag": "v3.5.3",
+ "notes": "Prevents duplicate first-analysis versions and clarifies that chapter 1 must be finished before characters appear.",
+ "tag": "v3.5.4",
  "updater_version": 1,
- "version": "3.5.3"
+ "version": "3.5.4"
 }

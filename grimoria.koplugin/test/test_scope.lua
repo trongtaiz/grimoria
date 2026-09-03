@@ -20,7 +20,8 @@ stub("ui/widget/infomessage", { new = function(_, o) return o end })
 stub("ui/widget/menu", { new = function(_, o) return o end })
 stub("device", { screen = { getWidth = function() return 600 end,
                             getHeight = function() return 800 end } })
-stub("lib/booktext", { getCurrentChapterIndex = function() return 2 end })
+local current_chapter = 2
+stub("lib/booktext", { getCurrentChapterIndex = function() return current_chapter end })
 
 local Spoilers = require("lib/spoilers")
 local Menu = require("lib/ui/menu")
@@ -64,6 +65,10 @@ local function newPlugin(store)
     return plugin
 end
 
+local shown = {}
+package.loaded["ui/uimanager"].show = function(_, widget) shown[#shown + 1] = widget end
+local Views = require("lib/ui/views")
+
 local function scopeMenuItem(plugin)
     local menu_items = {}
     plugin:addToMainMenu(menu_items)
@@ -77,6 +82,21 @@ local function scopeMenuItem(plugin)
         end
     end
 end
+
+local function withViews(plugin)
+    for name, value in pairs(Views) do plugin[name] = value end
+    return plugin
+end
+
+print("=== an analysed book on chapter 1 explains the reading boundary ===")
+current_chapter = 1
+local chapter_one = withViews(newPlugin({}))
+shown = {}
+chapter_one:showCharacters()
+check(#shown == 1 and shown[1].text == "showing_nothing_yet",
+      "the empty character view says to finish chapter 1, not to analyse again (got "
+      .. tostring(shown[1] and shown[1].text) .. ")")
+current_chapter = 2
 
 print("=== spoiler scope persists for the current book ===")
 local first_book = {}

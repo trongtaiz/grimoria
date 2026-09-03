@@ -3,7 +3,7 @@
  "files": [
   {
    "path": "_meta.lua",
-   "sha256": "4917d75f8ff628b6c57527986085fbe7cb809ebecb761c124fb06699af4873eb",
+   "sha256": "cbf0d7f77c74256f91dacbe3a492bb89c2dc006b71475e4e5c01ad1d747c65bd",
    "size": 353
   },
   {
@@ -28,8 +28,8 @@
   },
   {
    "path": "lib/archive.lua",
-   "sha256": "f2eddc63e5e796809a490ce3780b5f3efe51a514fe2d5dc129c3fcad94742a5b",
-   "size": 26008
+   "sha256": "3287de4c5f8b53b2b843e243016ed20e84999d3cf2b6c04415cc1f418ff7a75c",
+   "size": 26566
   },
   {
    "path": "lib/booktext.lua",
@@ -113,8 +113,8 @@
   },
   {
    "path": "lib/ui/views.lua",
-   "sha256": "bdba25ba6e3ebcbc30b4c97bc686ab29345308a72d4f3e509c2950d81e79fdfd",
-   "size": 24953
+   "sha256": "d34e1ee4b7d544475a98444d83f1ac0953c21a4f07318360781223b1056cc01c",
+   "size": 25064
   },
   {
    "path": "prompts/en.lua",
@@ -122,6 +122,6 @@
    "size": 19856
   }
  ],
- "tag": "v3.5.3",
- "version": "3.5.3"
+ "tag": "v3.5.4",
+ "version": "3.5.4"
 }

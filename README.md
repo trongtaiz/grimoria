@@ -220,8 +220,10 @@ Environment variables: `GEMINI_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`,
   The whole-book toggle is one tap away.
 - **The chapter you are currently in is not shown**, only the ones you have
   finished — so there is nothing on chapter 1, and a chapter you just finished
-  appears when you turn into the next one. Set `include_current_chapter.txt` to
-  `1` if you would rather have it the other way.
+  appears when you turn into the next one. If you open Characters on chapter 1
+  after analysis, Grimoria tells you to finish that chapter rather than asking
+  you to analyse again. Set `include_current_chapter.txt` to `1` if you would
+  rather have the current chapter included.
 - **The model is not perfect.** It occasionally misjudges which chapter a
   revelation lands in. The design limits the blast radius; it can't eliminate
   it.

@@ -47,8 +47,10 @@ end
 function GrimoriaPlugin:showCharacters()
     self:applyChapterFilter()  -- refresh for the current chapter
     if not self.characters or #self.characters == 0 then
+        local key = (self.book_data and self.filter_chapter == 0)
+            and "showing_nothing_yet" or "no_character_data"
         UIManager:show(InfoMessage:new{
-            text = self.loc:t("no_character_data") or "No character data",
+            text = self.loc:t(key) or "No character data",
             timeout = 3,
         })
         return

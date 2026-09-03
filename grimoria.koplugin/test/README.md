@@ -59,7 +59,7 @@ out of the same 64000-token completion budget, and that is already the model's
 ceiling, so a run that leaves little headroom is one truncation away from the
 effort step-down in `callChatGPT`.
 
-Ten free offline suites need no key and no book:
+Eleven free offline suites need no key and no book:
 
 ```sh
 lua smoke_openrouter.lua ..   # provider table, routing, main.lua entry points
@@ -67,6 +67,7 @@ lua test_cancel.lua ..        # the cancel confirmation on the in-flight fetch
 lua test_localization.lua ..  # language discovery, .po parity, format specifiers
 lua test_wiring.lua ..        # every method resolves after the lib/ mixin
 lua test_updater.lua ..       # self-update: swap, rollback, revert
+lua test_archive.lua ..       # first analysis creates exactly one stored version
 lua test_spoiler.lua ..       # the governing rule, on synthetic fixtures
 lua test_scope.lua ..         # visible, per-book spoiler-scope persistence
 lua test_mentions.lua ..      # appearance counting, the scan boundary, position restore
@@ -76,6 +77,13 @@ lua test_range.lua ..         # section analyses keep the book's own chapter num
 python3 make_legacy_fixture.py tmp_fixture
 lua test_legacy.lua .. tmp_fixture
 ```
+
+`test_archive.lua` saves the first analysis for a book with no version index and
+asserts that the picker receives exactly one row. It catches the save path
+rebuilding the missing index from the new payload and then appending that same
+payload a second time. It also covers the inverse boundary: when `loadIndex()`
+adopts a pre-rename index that does not contain the new payload, the new row
+must still be appended.
 
 `test_spoiler.lua` also takes a saved reply, and that is where it earns its
 keep — see below.

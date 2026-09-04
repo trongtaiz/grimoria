@@ -25,7 +25,7 @@ LLM.providers = {
     },
     --[[
     OpenRouter: one key, every model, and the model is chosen by its full slug
-    ("google/gemini-3.7-flash", "anthropic/claude-sonnet-5", ...). Its own
+    ("google/gemini-3.8-flash", "anthropic/claude-sonnet-5", ...). Its own
     provider entry rather than a preset of "custom" so that a proxy and
     OpenRouter can both be configured and switched between, exactly as chatgpt
     and custom already are.
@@ -43,7 +43,7 @@ LLM.providers = {
         endpoint = "https://openrouter.ai/api/v1/chat/completions",
         -- Full slug, including the vendor prefix. Verified present in
         -- OpenRouter's /api/v1/models listing.
-        model = "google/gemini-3.7-flash",
+        model = "google/gemini-3.8-flash",
         max_output_tokens = 64000,
         stream = true,
         -- Optional but recommended by OpenRouter: identifies the caller on
@@ -56,8 +56,8 @@ LLM.providers = {
         Thinking is ON by default here, and that is the whole point of this
         entry.
 
-        Left unset, google/gemini-3.7-flash answers at whatever thinking level
-        Google picks by default, which is a low one -- the reported symptom was
+        Left unset, google/gemini-3.8-flash answers at the provider's medium
+        thinking level. The reported symptom under a weaker default was
         summaries that read shallow. Building a per-chapter index of a whole
         novel is exactly the kind of long-horizon task the thinking pass is for,
         so it is worth paying for.
@@ -71,6 +71,11 @@ LLM.providers = {
         value down before it touches the answer when a reply hits the ceiling.
         ]]
         reasoning_effort = "high",
+        -- Gemini 3.8 accepts only these levels; in particular, `minimal`
+        -- returns 400. The fallback ladder uses this set instead of retrying a
+        -- whole paid book request with a value the model rejects.
+        reasoning_efforts_model = "google/gemini-3.8-flash",
+        reasoning_efforts = { "low", "medium", "high" },
         -- Which wire form this endpoint understands: "openrouter" for the
         -- reasoning object, "openai" (the default) for top-level
         -- reasoning_effort. Not inferred from the endpoint, because the LiteLLM
@@ -141,19 +146,14 @@ completion budget. Giving up answer detail comes after that, and dropping book
 text comes last.
 
 "none" does NOT mean "no thinking". It means "send no reasoning field", which
-leaves the provider's own default -- and measured against
-google/gemini-3.7-flash that default is roughly 325 reasoning tokens on a
-question small enough to fit in a paragraph. Thinking sits between "minimal"
-and "low" when nothing is asked for.
+leaves the provider's own default. For Gemini 3.8 Flash that default is
+"medium", so the explicit "low" setting is cheaper.
 
-Nor can thinking be turned off on that endpoint at all. `effort: "none"`,
-`enabled: false` and `max_tokens: 0` were each measured returning
-
-    400  Reasoning is mandatory for this endpoint and cannot be disabled.
-
-so "none" must never be sent as a value -- only honoured by omitting the field.
-"minimal" is the real floor: measured at exactly 0 reasoning tokens, and it is
-accepted.
+Some models make reasoning mandatory and expose only part of this ladder.
+OpenRouter currently lists Gemini 3.8 Flash as accepting low, medium and high;
+`minimal` returns an error. Provider entries may therefore declare
+`reasoning_efforts`, and both the wire builder and retry ladder honour that
+set. Providers without one retain the generic ladder for user-entered models.
 
 The list must stay complete, not merely cover what the menu offers. An effort
 that isn't listed here is dropped from the request with only a log line, so a
@@ -173,23 +173,46 @@ function LLM:isValidEffort(effort)
     return false
 end
 
---[[
-Where to drop to when a reply was truncated by the output budget, or nil once
-there is nowhere left to drop to.
+function LLM:supportsReasoningEffort(config, effort)
+    -- "none" omits the field, so it is valid even when the selected model has
+    -- a restricted set of explicit levels.
+    if effort == "none" then return true end
+    local supported = config and config.reasoning_efforts
+    if not supported or config.reasoning_efforts_model ~= config.model then
+        return self:isValidEffort(effort)
+    end
+    for _, value in ipairs(supported) do
+        if value == effort then return true end
+    end
+    return false
+end
 
-Deliberately not one rung at a time. Every step is another whole-book request
-against a paid API, and xhigh -> high frees almost nothing, so a rung-by-rung
-walk would spend four requests to reach the level that was going to be needed
-anyway. Two steps at most: down to a level that leaves the budget clearly free
-for the answer, then to the floor.
+-- Keep settings written for an older/default model useful after a model
+-- upgrade. Gemini 3.8 has no minimal/xhigh/max values: clamp them to the
+-- nearest supported level instead of silently omitting reasoning or paying
+-- for a rejected request.
+function LLM:normaliseReasoningEffort(config, effort)
+    if self:supportsReasoningEffort(config, effort) then return effort end
+    local restricted = config and config.reasoning_efforts
+        and config.reasoning_efforts_model == config.model
+    if not restricted then return nil end
+    if effort == "minimal" then return "low" end
+    if effort == "xhigh" or effort == "max" then return "high" end
+    return nil
+end
 
-The floor is "minimal", not "none". Sending nothing leaves the provider's
-default thinking in place -- more than "minimal", not less -- so "none" is a
-rung to step DOWN from rather than the bottom of the ladder, and stepping from
-it to "minimal" is a real reduction rather than a no-op.
-]]
-function LLM:fallbackEffort(effort)
-    if effort == "minimal" then return nil end          -- already at the floor
+-- Pick the cheapest model-supported effort below the current setting. Jumping
+-- directly avoids billing several whole-book retries just to walk each rung.
+function LLM:fallbackEffort(effort, config)
+    local restricted = config and config.reasoning_efforts
+        and config.reasoning_efforts_model == config.model
+    if restricted then
+        if effort == "low" then return nil end
+        if self:supportsReasoningEffort(config, "low") then return "low" end
+        return nil
+    end
+
+    if effort == "minimal" then return nil end
     if effort == "low" or effort == "none" or effort == nil then return "minimal" end
     if self:isValidEffort(effort) then return "low" end
     return nil
@@ -224,6 +247,17 @@ function LLM:buildReasoningBody(body, config, effort)
     if not self:isValidEffort(effort) then
         logger.warn("LLM: ignoring unknown reasoning effort:", tostring(effort))
         return body
+    end
+    local supported_effort = self:normaliseReasoningEffort(config, effort)
+    if not supported_effort then
+        logger.warn("LLM: ignoring unsupported reasoning effort:", tostring(effort),
+                    "model:", tostring(config.model))
+        return body
+    end
+    if supported_effort ~= effort then
+        logger.warn("LLM: mapping unsupported reasoning effort:", tostring(effort),
+                    "->", supported_effort, "model:", tostring(config.model))
+        effort = supported_effort
     end
 
     if config.reasoning_style == "openrouter" then
@@ -1363,7 +1397,7 @@ function LLM:callChatGPT(prompt, config, state)
                     especially here, where shallow output is the complaint this
                     whole feature exists to answer.
                     ]]
-                    local next_effort = self:fallbackEffort(effort)
+                    local next_effort = self:fallbackEffort(effort, config)
                     if next_effort then
                         logger.info("LLM: lowering reasoning effort",
                                     tostring(effort), "->", next_effort, "and retrying")
@@ -1416,7 +1450,7 @@ function LLM:callChatGPT(prompt, config, state)
                 local reasoned = u and u.completion_tokens_details
                     and (u.completion_tokens_details.reasoning_tokens or 0) > 0
                 if reasoned or (acc.reasoning_bytes or 0) > 0 then
-                    local next_effort = self:fallbackEffort(effort)
+                    local next_effort = self:fallbackEffort(effort, config)
                     if next_effort then
                         logger.warn("LLM: budget spent entirely on reasoning; lowering",
                                     tostring(effort), "->", next_effort)

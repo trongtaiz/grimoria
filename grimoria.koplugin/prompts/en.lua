@@ -124,7 +124,9 @@ entries must read as unrelated:
    that chapter.
 7. The same stop-reading rule applies to chapter summaries and events:
    describe each scene as the text presents it at that point, preserving any
-   anonymity, disguise, or misdirection the author maintains there.
+   anonymity, disguise, or misdirection the author maintains there. Keep each
+   summary to 1-2 sentences. At most TWO events per chapter; include only the
+   events needed to understand the chapter and later character development.
 8. NO FORWARD REFERENCE AND NO FORESHADOWING. Write the summary and events of
    chapter n as if chapter n+1 did not exist. Nothing may hint at what is
    coming, not even without naming it: no "which will prove important later",
@@ -182,14 +184,14 @@ For each identity:
     shown from its own first_chapter onward, so putting a true name in it
     prints the twist on page one. Use [] if the text only ever uses the one
     name.
-  - by_chapter: an entry ONLY for chapters where this identity actually
-    appears or is significantly discussed, 1-2 sentences on what they do IN
-    THAT CHAPTER, never referencing an identity the text has not yet linked.
-    Skip chapters where they are absent - no filler entries.
+  - by_chapter: an entry ONLY where this identity materially acts, changes, or
+    is significantly discussed. Write exactly ONE short sentence on what they
+    do IN THAT CHAPTER, never referencing an identity the text has not yet
+    linked. Skip incidental mentions, repeated state, and chapters where they
+    are absent - no filler entries.
 
-Keep by_chapter entries short. A long book with many characters must still
-fit in the response budget; brevity per entry matters more than completeness
-of prose.
+A long book with many characters must still fit in the response budget;
+brevity per entry matters more than completeness of prose.
 ]],
 
 section_merges = [[
@@ -315,8 +317,8 @@ gives you nothing:
     {
       "index": 1,
       "title": "chapter title as printed",
-      "summary": "2-4 sentences; do not use a later-revealed name",
-      "events": [ { "event": "what happened", "importance": "why it matters" } ]
+      "summary": "1-2 sentences; do not use a later-revealed name",
+      "events": [ { "event": "important event; at most two per chapter", "importance": "why it matters" } ]
     }
   ],
   "characters": [
@@ -328,7 +330,7 @@ gives you nothing:
       "intro": "one sentence, knowing only what a new reader knows; no later job, no unmet name",
       "first_chapter": 1,
       "aliases": [ { "alias": "another spelling of THIS name", "first_chapter": 1 } ],
-      "by_chapter": [ { "chapter": 1, "development": "1-2 sentences" } ]
+      "by_chapter": [ { "chapter": 1, "development": "one short sentence" } ]
     }
   ],
   "identity_merges": [

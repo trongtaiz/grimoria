@@ -280,7 +280,7 @@ function GrimoriaPlugin:selectOpenRouterModel(touchmenu_instance)
     local current = helper.providers.openrouter.model
 
     local presets = {
-        "google/gemini-3.7-flash",
+        "google/gemini-3.8-flash",
         "google/gemini-3.5-flash",
         "google/gemini-3.5-flash-lite",
         "google/gemini-3.1-pro-preview",
@@ -309,7 +309,7 @@ function GrimoriaPlugin:selectOpenRouterModel(touchmenu_instance)
         callback = function()
             if dialog then UIManager:close(dialog) end
             self:setProviderField("openrouter", "model", "OpenRouter model",
-                "Full slug from openrouter.ai/models,\nvendor prefix included,\ne.g. google/gemini-3.7-flash",
+                "Full slug from openrouter.ai/models,\nvendor prefix included,\ne.g. google/gemini-3.8-flash",
                 function()
                     if touchmenu_instance then touchmenu_instance:updateItems() end
                 end)

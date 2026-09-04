@@ -79,7 +79,7 @@ travels with any copy of it.
 | Provider | Get a key | Notes |
 |---|---|---|
 | **Google Gemini** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | Has a free tier. Easiest start. |
-| **OpenRouter** | [openrouter.ai/keys](https://openrouter.ai/keys) | One key, most models. Use the full slug, e.g. `google/gemini-3.7-flash`. |
+| **OpenRouter** | [openrouter.ai/keys](https://openrouter.ai/keys) | One key, most models. Use the full slug, e.g. `google/gemini-3.8-flash`. |
 | **ChatGPT** | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Standard OpenAI endpoint. |
 | **Custom** | — | Any OpenAI-compatible endpoint: a proxy, a local server. Set the endpoint yourself. |
 
@@ -135,21 +135,23 @@ Everything below is local: no network, no cost, and it works with wifi off.
 
 ## What it costs
 
-Measured on a 56-chapter novel (~420k characters) through OpenRouter:
+Measured on a 56-chapter novel (~420k characters) through OpenRouter before
+the September 2026 price change:
 
-| Setting | Cost | Time |
+| Setting | Historical cost | Time |
 |---|---|---|
 | `google/gemini-3.7-flash`, no reasoning | $0.081 | 116 s |
 | `google/gemini-3.7-flash`, reasoning `high` | $0.107 | 187 s |
 
+Those figures are retained as measurements, not current quotes. OpenRouter
+pricing changes independently of the plugin; check the selected model's page
+before analysing a large book. The shipped OpenRouter default is
+`google/gemini-3.8-flash`.
+
 Once per book. Gemini's free tier can bring that to zero. Reasoning tokens are
 billed as output tokens on top of the answer, so lowering the effort is the
-lever if a long book gets expensive — in the `high` run above, a third of the
-output tokens went on thinking.
-
-Note that `none` means *omit the reasoning field*, which leaves the provider's
-own default in place rather than turning thinking off. Measured: it still spent
-1,473 reasoning tokens. Thinking cannot be disabled on this model.
+main cost lever. Gemini 3.8 supports `low`, `medium`, and `high`; omitting the
+field uses its provider default rather than turning reasoning off.
 
 Longer books cost more and take longer; twenty minutes is the realistic ceiling
 rather than the norm.

@@ -3,13 +3,13 @@
  "files": [
   {
    "path": "_meta.lua",
-   "sha256": "cbf0d7f77c74256f91dacbe3a492bb89c2dc006b71475e4e5c01ad1d747c65bd",
+   "sha256": "751dd722dba09fe4a8a950e57924c6cc3045f0ae363b9084bb20601049d897b3",
    "size": 353
   },
   {
    "path": "config.lua",
-   "sha256": "27fcd105637ce4f0741113d0fcf6f818606dfdf965e6560080d1277e9ef6dad9",
-   "size": 3870
+   "sha256": "14d0ac10ef648168418bc6c50427af35b5a8f999b5915f3deeff6b9a8321b7b4",
+   "size": 3765
   },
   {
    "path": "main.lua",
@@ -48,8 +48,8 @@
   },
   {
    "path": "lib/llm.lua",
-   "sha256": "b7f549d6ff7451385dd9060e5aab86297579976121a4dae404c578d3bd3469ac",
-   "size": 93258
+   "sha256": "b3b6da40b0b98b4a9bf6e0a1491c12e246457087c47da9e84bfedb73a4b72b9d",
+   "size": 94855
   },
   {
    "path": "lib/marginalia.lua",
@@ -103,7 +103,7 @@
   },
   {
    "path": "lib/ui/settings.lua",
-   "sha256": "cdd42b8bb4f14ef6459200caf75626f2257011c925eb2b3fd22a645da34a8cad",
+   "sha256": "195c61ddba0093c25735b87346aa56379a6981b0267a7d7be2a9c74538780eb8",
    "size": 18207
   },
   {
@@ -118,10 +118,10 @@
   },
   {
    "path": "prompts/en.lua",
-   "sha256": "cc2aaf7316e42d470bb3f2f7580cc5ff0730c741a9e3141f435b13d9fd512624",
-   "size": 19856
+   "sha256": "44e0ada8a65ab02c0c7d614acc87674d19874dc2a55ff4964fa9e79d9addf290",
+   "size": 20081
   }
  ],
- "tag": "v3.5.4",
- "version": "3.5.4"
+ "tag": "v3.5.5",
+ "version": "3.5.5"
 }

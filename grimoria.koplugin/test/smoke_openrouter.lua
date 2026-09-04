@@ -32,11 +32,13 @@ print("=== provider table ===")
 check(or_cfg ~= nil, "openrouter provider exists")
 check(or_cfg.endpoint == "https://openrouter.ai/api/v1/chat/completions",
       "endpoint: " .. tostring(or_cfg.endpoint))
-check(or_cfg.model == "google/gemini-3.7-flash", "default model: " .. tostring(or_cfg.model))
+check(or_cfg.model == "google/gemini-3.8-flash", "default model: " .. tostring(or_cfg.model))
 check(or_cfg.stream == true, "streaming is on")
 check(or_cfg.max_output_tokens == 64000, "output budget: " .. tostring(or_cfg.max_output_tokens))
 check(type(or_cfg.extra_headers) == "table" and or_cfg.extra_headers["X-Title"] ~= nil,
       "OpenRouter attribution headers present")
+check(or_cfg.reasoning_efforts ~= nil,
+      "default model declares its supported reasoning levels")
 
 print("\n=== routing ===")
 -- getBookData sends anything with an endpoint through callChatGPT. Prove it by
@@ -92,20 +94,22 @@ check(LLM.saveCustomField == nil,
       "saveCustomField is gone -- saveProviderField replaced it")
 
 --[[
-The reasoning wire format, which is the one thing here that cannot be checked
-by reading the code: the two providers need DIFFERENT spellings and sending the
-wrong one is a 400, not a silently ignored field.
-
-Everything asserted below was measured against the live endpoint first:
-  effort "none" / enabled:false / max_tokens:0  ->  400, reasoning is mandatory
-  omitting the field                            ->  ~325 reasoning tokens
-  effort "minimal"                              ->  0 reasoning tokens
+The reasoning wire format needs different spellings for OpenRouter and custom;
+sending the wrong one is a 400 rather than a harmless ignored field.
+Model-specific assertions use the current catalogue: Gemini 3.8 Flash accepts
+low, medium and high; `minimal` is rejected. `none` omits the field and selects
+the provider's medium default.
 ]]
 print("\n=== reasoning body ===")
 local cus_cfg = LLM.providers.custom
 
 check(or_cfg.reasoning_effort == "high",
       "openrouter defaults to high (" .. tostring(or_cfg.reasoning_effort) .. ")")
+check(LLM:supportsReasoningEffort(or_cfg, "low"), "Gemini 3.8 supports low reasoning")
+check(LLM:supportsReasoningEffort(or_cfg, "medium"), "Gemini 3.8 supports medium reasoning")
+check(LLM:supportsReasoningEffort(or_cfg, "high"), "Gemini 3.8 supports high reasoning")
+check(not LLM:supportsReasoningEffort(or_cfg, "minimal"),
+      "Gemini 3.8 rejects minimal reasoning")
 check(or_cfg.reasoning_style == "openrouter", "openrouter uses the reasoning object")
 check(cus_cfg.reasoning_style ~= "openrouter", "custom keeps top-level reasoning_effort")
 
@@ -131,20 +135,27 @@ check(b.reasoning_effort == "none",
 b = LLM:buildReasoningBody({}, or_cfg, "banana")
 check(b.reasoning == nil and b.reasoning_effort == nil, "an unknown effort is dropped, not sent")
 
--- Every documented level must be in the ladder. One that is missing is
--- silently dropped from the request while the menu still displays it, which is
--- a worse failure than the 400 an unknown value used to produce.
-for _, e in ipairs({ "minimal", "low", "medium", "high", "xhigh", "max" }) do
+-- The global ladder accepts user-entered models. The shipped Gemini 3.8
+-- provider narrows it to the explicit levels its endpoint supports.
+for _, e in ipairs({ "low", "medium", "high" }) do
     local bb = LLM:buildReasoningBody({}, or_cfg, e)
-    check(bb.reasoning and bb.reasoning.effort == e, "effort '" .. e .. "' reaches the wire")
+    check(bb.reasoning and bb.reasoning.effort == e, "Gemini 3.8 effort '" .. e .. "' reaches the wire")
 end
-check(LLM:fallbackEffort("max") == "low", "step-down: max -> low")
-
-check(LLM:fallbackEffort("high") == "low", "step-down: high -> low")
-check(LLM:fallbackEffort("low") == "minimal", "step-down: low -> minimal")
-check(LLM:fallbackEffort("none") == "minimal",
-      "step-down: none -> minimal (the default is NOT the floor)")
-check(LLM:fallbackEffort("minimal") == nil, "step-down: minimal is the floor")
+local below = LLM:buildReasoningBody({}, or_cfg, "minimal")
+check(below.reasoning and below.reasoning.effort == "low",
+      "Gemini 3.8 maps minimal to its low floor")
+for _, e in ipairs({ "xhigh", "max" }) do
+    local bb = LLM:buildReasoningBody({}, or_cfg, e)
+    check(bb.reasoning and bb.reasoning.effort == "high",
+          "Gemini 3.8 maps '" .. e .. "' to its high ceiling")
+end
+check(LLM:fallbackEffort("high", or_cfg) == "low", "3.8 step-down: high -> low")
+check(LLM:fallbackEffort("low", or_cfg) == nil, "3.8 step-down: low is the floor")
+check(LLM:fallbackEffort("none", or_cfg) == "low",
+      "3.8 step-down: provider default -> low")
+local legacy_cfg = { reasoning_style = "openrouter" }
+check(LLM:fallbackEffort("low", legacy_cfg) == "minimal",
+      "generic OpenRouter step-down retains the minimal floor")
 
 -- The step-down must never write to the shared provider table, or it would
 -- change the user's setting for the session and the menu would show it.
@@ -159,7 +170,7 @@ check(type(p.holdDeviceAwake) == "function", "holdDeviceAwake exists")
 check(type(p.releaseDeviceAwake) == "function", "releaseDeviceAwake exists")
 check(type(p.runFetch) == "function", "runFetch exists")
 check(type(p.selectOpenRouterModel) == "function", "selectOpenRouterModel exists")
-check(p:getProviderModel("openrouter") == "google/gemini-3.7-flash",
+check(p:getProviderModel("openrouter") == "google/gemini-3.8-flash",
       "getProviderModel: " .. tostring(p:getProviderModel("openrouter")))
 check(p:getProviderModel("nosuch") == nil, "getProviderModel is nil for an unknown provider")
 check(type(p.selectReasoningEffort) == "function", "selectReasoningEffort exists")

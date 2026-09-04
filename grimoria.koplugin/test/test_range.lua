@@ -183,6 +183,14 @@ do
           "but the rest of the analysis schema is still there")
     check(skip:find("historical_figures", 1, true) ~= nil,
           "including historical figures")
+    check(first:find("At most TWO events per chapter", 1, true) ~= nil,
+          "caps chapter events at two")
+    check(first:find("summary to 1%-2 sentences", 1) ~= nil,
+          "caps each chapter summary at two sentences")
+    check(first:find("exactly ONE short sentence", 1, true) ~= nil,
+          "caps each character development at one sentence")
+    check(first:find("materially acts, changes, or", 1, true) ~= nil,
+          "omits incidental character-development entries")
 end
 
 print("\n=== quotes prompt is a quality bar, not a quota ===")

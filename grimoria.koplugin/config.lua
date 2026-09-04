@@ -40,16 +40,15 @@ return {
     -- settings/grimoria/openrouter_api_key.txt. Deliberately not here: this file
     -- ships inside the plugin folder, so a key written here travels with any
     -- copy of the plugin.
-    openrouter_model = "google/gemini-3.7-flash",
+    openrouter_model = "google/gemini-3.8-flash",
     -- openrouter_api_key = "sk-or-v1-...",   -- prefer settings/grimoria/openrouter_api_key.txt
     -- default_provider = "openrouter",
 
-    -- How hard the model thinks before answering: none | minimal | low |
-    -- medium | high | xhigh. Defaults to "high" in lib/llm.lua, because a
-    -- per-chapter index of a whole novel is long-horizon work and the models'
-    -- own default thinking level is low -- which reads as shallow summaries.
-    -- Thinking tokens are billed as output tokens on top of the answer, so
-    -- turning this down is the lever if a book gets expensive.
+    -- How hard the model thinks before answering. Gemini 3.8 accepts low,
+    -- medium and high; other OpenRouter models may expose different levels.
+    -- Defaults to "high" in lib/llm.lua because a whole novel is long-horizon
+    -- work. Thinking tokens are billed as output tokens, so turning this down
+    -- is the main cost lever.
     -- openrouter_reasoning_effort = "high",
 
     -- The "custom" provider is the same OpenAI wire format but kept separate,
